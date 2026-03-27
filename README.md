@@ -3,6 +3,7 @@
 ---
 
 # 💎 RubiAUR
+![RubiAUR LOGO](LOGO.png) 
 
 **The most elegant way to manage your Arch Linux system.**
 
