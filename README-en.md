@@ -32,3 +32,7 @@ The easiest way to use RubiAUR is through the pre-compiled package which include
    ```bash
    chmod +x installer.AppImage
    ./installer.AppImage
+
+🌎 Languages
+
+    Currently, the RubiAUR store only supports Spanish, but future updates will implement: Français, Deutsch & English, with the latter being the next to be added. We appreciate your patience. :)
