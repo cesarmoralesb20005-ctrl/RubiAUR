@@ -30,8 +30,8 @@ The easiest way to use RubiAUR is through the pre-compiled package which include
 2. Extract the contents into a folder.
 3. Open your terminal in that folder and run the visual installer:
    ```bash
-   chmod +x installer.AppImage
-   ./installer.AppImage
+   chmod +x installer
+   ./installer
 4. Si las aplicaciones de aur no se instalan asegúrate de tener instalado yay o paru:
    instala git desde la app RubiAUR
    ```bash
