@@ -1,4 +1,4 @@
-🌍 Read this in: [Español](README.md) | [English](README-en.md)
+🌍 Read this in: [Español](README-en.md) | [English](README.md)
 
 ---
 
