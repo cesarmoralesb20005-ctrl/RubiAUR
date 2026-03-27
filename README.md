@@ -31,3 +31,9 @@ La forma más sencilla de utilizar RubiAUR es mediante el paquete precompilado q
    ```bash
    chmod +x installer.AppImage
    ./installer.AppImage
+4. Si las aplicaciones de aur no se instalan asegúrate de tener instalado yay o paru:
+   instala git desde la app RubiAUR
+   ```bash
+   git clone https://aur.archlinux.org/yay.git
+   cd yay
+   makepkg -si
