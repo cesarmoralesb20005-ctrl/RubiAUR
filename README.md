@@ -1,3 +1,7 @@
+🌍 Read this in: [Español](README.md) | [English](README-en.md)
+
+---
+
 # 💎 RubiAUR
 
 **La forma más elegante de gestionar tu sistema Arch Linux.**
@@ -15,7 +19,7 @@ RubiAUR es una tienda de aplicaciones y gestor de paquetes gráfico construido c
   * Busca y aplica actualizaciones de todo el sistema.
   * Herramienta integrada para limpiar la caché y dependencias huérfanas de forma segura.
 * 📊 **Información Detallada:** Obtén descripciones, peso estimado de los paquetes, íconos obtenidos dinámicamente y comentarios de la comunidad para los paquetes de AUR.
-* 🪄 **Asistente de Bienvenida e Instalador Visual:** Configura tus preferencias (idioma, tema, backend) en el primer inicio. Incluye un instalador gráfico (`installer.py`) para integrar la aplicación a tu menú del sistema sin tocar la terminal.
+* 🪄 **Asistente de Bienvenida e Instalador Visual:** Configura tus preferencias (idioma, tema, backend) en el primer inicio. Incluye un instalador gráfico para integrar la aplicación a tu menú del sistema sin tocar la terminal.
 
 ## 📥 Instalación (Recomendado)
 
@@ -27,7 +31,3 @@ La forma más sencilla de utilizar RubiAUR es mediante el paquete precompilado q
    ```bash
    chmod +x installer.AppImage
    ./installer.AppImage
-
-
-## 🌎 Idiomas
-* Actualmente la tienda RubiAUR solo cuenta con el idioma español, pero en futuras actualizaciones se implementarán los idiomas: Français, Deutsch & English, siendo éste ultimo el mas pronto a implementar, agradecemos la espera. :)
