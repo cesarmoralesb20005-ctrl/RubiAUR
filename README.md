@@ -5,7 +5,7 @@
 # 💎 RubiAUR
 
 <p align="center">
-  <img src="LOGO.svg" width="150" title="RubiAUR Logo">
+  <img src="LOGO.svg" width="450" title="RubiAUR Logo">
 </p>
 
 # RubiAUR
