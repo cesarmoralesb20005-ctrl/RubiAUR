@@ -4,7 +4,7 @@
 
 RubiAUR es una tienda de aplicaciones y gestor de paquetes gráfico construido con Python y PySide6. Diseñado meticulosamente para ofrecer una experiencia premium, fluida y visualmente atractiva, unificando el poder de `pacman` y el ecosistema de AUR (`yay` / `paru`) en una sola interfaz moderna.
 
-![RubiAUR Screenshot](enlace-a-tu-captura-de-pantalla.png) 
+![RubiAUR Screenshot](home.png) 
 
 ## ✨ Características Principales
 
