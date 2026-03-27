@@ -27,3 +27,7 @@ La forma más sencilla de utilizar RubiAUR es mediante el paquete precompilado q
    ```bash
    chmod +x installer.AppImage
    ./installer.AppImage
+
+
+## 🌎 Idiomas
+* Actualmente la tienda RubiAUR solo cuenta con el idioma español, pero en futuras actualizaciones se implementarán los idiomas: Français, Deutsch & English, siendo éste ultimo el mas pronto a implementar, agradecemos la espera. :)
