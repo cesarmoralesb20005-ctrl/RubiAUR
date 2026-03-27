@@ -3,7 +3,12 @@
 ---
 
 # 💎 RubiAUR
-![RubiAUR LOGO](LOGO.png) 
+
+<p align="center">
+  <img src="LOGO.svg" width="150" title="RubiAUR Logo">
+</p>
+
+# RubiAUR
 
 **The most elegant way to manage your Arch Linux system.**
 
