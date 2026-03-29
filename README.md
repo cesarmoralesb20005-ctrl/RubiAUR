@@ -40,16 +40,16 @@ The easiest way to use RubiAUR is through the pre-compiled package which include
 4. Si las aplicaciones de aur no se instalan asegúrate de tener instalado yay o paru:
    instala git desde la app RubiAUR
    ```bash
-   git clone https://aur.archlinux.org/yay.git
+   git clone https://aur.archlinux.org/yay-bin.git
    cd yay
    makepkg -si
 4. If the apps from AUR doesn't work/install,make sure you have yay or paru:
    install git from RubiAUR
    ```bash
-   git clone https://aur.archlinux.org/yay.git
+   git clone https://aur.archlinux.org/yay-bin.git
    cd yay
    makepkg -si
  
 🌎 Languages
 
-    Currently, the RubiAUR store only supports English and Spanish, but future updates will implement: Deutsch & Français with the latter being the next to be added. We appreciate your patience. :)
+    Currently, the RubiAUR store only supports English, Spanish, Deutsch and Français.
