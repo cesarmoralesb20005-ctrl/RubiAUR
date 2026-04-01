@@ -114,7 +114,7 @@ class RubiAURInstaller(QMainWindow):
         logo_origen = "logo.svg"
 
         try:
-            # 1. Copiar ejecutable (Eliminamos el viejo primero para evitar fallos de sobrescritura)
+            # 1. Copiar ejecutable 
             if not os.path.exists(bin_origen):
                 raise Exception(f"File not found: {bin_origen}")
             if os.path.exists(self.bin_destino):
