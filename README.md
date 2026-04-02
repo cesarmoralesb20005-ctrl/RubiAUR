@@ -38,8 +38,8 @@ The easiest way to use RubiAUR is through the pre-compiled AppImage package, whi
 2. Extract the contents into a folder.
 3. Open your terminal in that folder and run the visual installer:
    ```bash
-   chmod +x Instalar_RubiAUR
-   ./Instalar_RubiAUR
+   chmod +x installer
+   ./installer
 
 🛠️ Building from source
 
