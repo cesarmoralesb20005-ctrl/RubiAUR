@@ -46,7 +46,7 @@ The easiest way to use RubiAUR is through the pre-compiled AppImage package, whi
 If you want to run the source code directly or contribute to the project:
 Bash
 
-git clone [https://github.com/LoopedRacer9/RubiAUR.git](https://github.com/LoopedRacer9/RubiAUR.git)
+git clone [https://github.com/cesarmoralesb20005-ctrl/RubiAUR](https://github.com/cesarmoralesb20005-ctrl/RubiAUR)
 cd RubiAUR
 pip install -r requirements.txt
 python src/main.py
