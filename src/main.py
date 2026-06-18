@@ -13,7 +13,7 @@ from workers import (AutocompleteWorker, CheckUpdateWorker, InstallWorker,
                      SearchListWorker, DetailWorker, AurInstallerWorker, SelfUpdateWorker, GalleryWorker)
 from idiomas import TRANSLATIONS
 from widgets import (ToastNotification, LoadingSpinner, PacmanProgress, SearchLineEdit, FadeStackedWidget, HomeAppCard, AppListItem, FeaturedAppCard)
-from config import ConfigManager
+from config import load_settings, save_settings, load_history, save_history
 from style import LIGHT_STYLE, DARK_STYLE
 
 # --- 4. INTERFAZ PRINCIPAL ---
@@ -35,12 +35,11 @@ class RubiAUR(QMainWindow):
         self.last_view = 0
         self.icon_cache = {} 
         
-        self.config_manager = ConfigManager()
-        
-        self.app_settings = self.config_manager.load_settings({
+        # Configuraciones y caché
+        self.app_settings = load_settings({
             "lang": 1, "aur": 0, "cache": 0, "updates": 0, "theme": 0
         })
-        self.search_history = self.config_manager.load_history()
+        self.search_history = load_history()
         
         self.active_install_pkg = None
         self.active_install_action = None
@@ -192,10 +191,10 @@ class RubiAUR(QMainWindow):
         self.check_dependencies()
 
     def save_settings(self):
-        self.config_manager.save_settings(self.app_settings)
+        save_settings(self.app_settings)
 
     def save_history(self):
-        self.config_manager.save_history(self.search_history)
+        save_history(self.search_history)
 
     def check_dependencies(self):
         if not is_aur_helper_installed():

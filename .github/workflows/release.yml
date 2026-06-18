@@ -1,0 +1,65 @@
+name: Build and Release RubiAUR
+
+on:
+  push:
+    tags:
+      - 'v*' # Se ejecuta al subir un tag como v1.0
+  workflow_dispatch: # Permite ejecución manual desde la pestaña Actions
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install PySide6 pyinstaller
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    - name: Build RubiAUR Binary
+      run: |
+        # Compilar la aplicación principal (Se nombra como AppImage según tu estructura)
+        pyinstaller --onefile --windowed --name "RubiAUR-x86_64.AppImage" src/main.py
+        
+    - name: Build Installer
+      run: |
+        # Compilar el instalador gráfico
+        pyinstaller --onefile --windowed --name "installer" src/installer.py
+
+    - name: Prepare Release Package
+      run: |
+        mkdir -p release_package
+        # Mover los binarios
+        cp dist/RubiAUR-x86_64.AppImage release_package/
+        cp dist/installer release_package/
+        # Copiar y renombrar el logo según lo espera el instalador
+        cp LOGO.svg release_package/logo.svg
+        
+        # Crear archivo ZIP para la release
+        cd release_package
+        zip -r ../RubiAUR_Release.zip *
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: RubiAUR_Release.zip
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload Artifact (For Manual Runs)
+      if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: RubiAUR_Release
+        path: RubiAUR_Release.zip

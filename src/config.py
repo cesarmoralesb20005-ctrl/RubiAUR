@@ -1,41 +1,40 @@
 import os
 import json
 
-class ConfigManager:
-    def __init__(self):
-        self.config_dir = os.path.expanduser("~/.config/rubiaur")
-        os.makedirs(self.config_dir, exist_ok=True)
-        self.settings_file = os.path.join(self.config_dir, "settings.json")
-        self.history_file = os.path.join(self.config_dir, "history.json")
+CONFIG_DIR = os.path.expanduser("~/.config/rubiaur")
+SETTINGS_FILE = os.path.join(CONFIG_DIR, "settings.json")
+HISTORY_FILE = os.path.join(CONFIG_DIR, "history.json")
 
-    def load_settings(self, default_settings):
-        if os.path.exists(self.settings_file):
-            try:
-                with open(self.settings_file, 'r', encoding='utf-8') as f:
-                    default_settings.update(json.load(f))
-            except Exception:
-                pass
-        return default_settings
+os.makedirs(CONFIG_DIR, exist_ok=True)
 
-    def save_settings(self, settings):
+def load_settings(default_settings):
+    if os.path.exists(SETTINGS_FILE):
         try:
-            with open(self.settings_file, 'w', encoding='utf-8') as f:
-                json.dump(settings, f)
+            with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
+                default_settings.update(json.load(f))
         except Exception:
             pass
+    return default_settings
 
-    def load_history(self):
-        if os.path.exists(self.history_file):
-            try:
-                with open(self.history_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except Exception:
-                return []
-        return []
+def save_settings(settings):
+    try:
+        with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(settings, f)
+    except Exception:
+        pass
 
-    def save_history(self, history):
+def load_history():
+    if os.path.exists(HISTORY_FILE):
         try:
-            with open(self.history_file, 'w', encoding='utf-8') as f:
-                json.dump(history, f)
+            with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
         except Exception:
-            pass
+            return []
+    return []
+
+def save_history(history):
+    try:
+        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(history, f)
+    except Exception:
+        pass
