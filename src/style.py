@@ -14,6 +14,15 @@ def adjust_color_brightness(hex_color, amount):
     except:
         return "#" + hex_color
 
+def get_brightness(hex_color):
+    hex_color = hex_color.lstrip('#')
+    if len(hex_color) != 6: return 0
+    try:
+        r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        return (r * 299 + g * 587 + b * 114) / 1000
+    except:
+        return 0
+
 def get_stylesheet(is_dark=True):
     # Valores por defecto de RubiAUR
     if is_dark:
@@ -59,16 +68,37 @@ def get_stylesheet(is_dark=True):
             # Usar color de acento principal (color4 es azul, pero color2 o color6 también son populares. Usamos color4 por defecto).
             accent = wal_colors["colors"].get("color4", accent)
             
-            # En modo oscuro, adaptamos el fondo
-            if is_dark:
-                wal_bg = wal_colors["special"].get("background", bg_main)
+            # Adaptamos el fondo y texto según el tema
+            wal_bg = wal_colors["special"].get("background", bg_main)
+            wal_fg = wal_colors["special"].get("foreground", text_main)
+            
+            # Verificamos si pywal generó un tema claro u oscuro
+            wal_is_dark = get_brightness(wal_bg) < 128
+            
+            # Si el modo de la app coincide con el de pywal, tomamos sus colores.
+            if is_dark == wal_is_dark:
                 bg_main = wal_bg
+                text_main = wal_fg
+            else:
+                # Si el usuario cambia el modo desde la app pero Pywal no fue actualizado (ej. pywal es oscuro pero pedimos modo claro), 
+                # invertimos el fondo y el texto generados por pywal para "sintetizar" un modo claro/oscuro compatible.
+                bg_main = wal_fg
+                text_main = wal_bg
+            
+            if is_dark:
                 bg_header = adjust_color_brightness(bg_main, 10)
                 bg_card = adjust_color_brightness(bg_main, 15)
                 bg_card_hover = adjust_color_brightness(bg_main, 25)
                 input_bg = bg_card_hover
                 input_hover = adjust_color_brightness(bg_main, 35)
                 active_btn_bg = adjust_color_brightness(bg_main, 20)
+            else:
+                bg_header = adjust_color_brightness(bg_main, -5)
+                bg_card = adjust_color_brightness(bg_main, 0)
+                bg_card_hover = adjust_color_brightness(bg_main, -15)
+                input_bg = bg_card_hover
+                input_hover = adjust_color_brightness(bg_main, -25)
+                active_btn_bg = adjust_color_brightness(bg_main, -10)
                 
         except Exception:
             pass
@@ -101,7 +131,7 @@ def get_stylesheet(is_dark=True):
     QComboBox {{ background-color: {bg_card_hover}; color: {text_main}; border-radius: 12px; padding: 0px 15px; font-weight: bold; border: none; }}
     QComboBox:hover {{ background-color: {input_hover}; }}
     QComboBox::drop-down {{ border: none; width: 30px; }}
-    QComboBox QAbstractItemView {{ background-color: {bg_card}; border: 1px solid {border_light}; selection-background-color: {bg_card_hover}; selection-color: {accent}; outline: none; }}
+    QComboBox QAbstractItemView {{ background-color: {bg_card}; color: {text_main}; border: 1px solid {border_light}; selection-background-color: {bg_card_hover}; selection-color: {accent}; outline: none; }}
     QComboBox QAbstractItemView::item {{ min-height: 35px; padding: 0px 10px; }}
     QScrollArea {{ border: none; background-color: transparent; }}
     QLabel {{ color: {text_main}; }} 
