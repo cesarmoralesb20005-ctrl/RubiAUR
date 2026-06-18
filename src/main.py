@@ -11,6 +11,7 @@ from utils import get_resource_path, get_ui_icon, get_local_icon, create_rounded
 from workers import (AutocompleteWorker, CheckUpdateWorker, InstallWorker, 
                      InstalledAppsWorker, CategoryWorker, IconWorker, 
                      SearchListWorker, DetailWorker, AurInstallerWorker, SelfUpdateWorker, GalleryWorker)
+from security import SecurityScannerWorker
 from idiomas import TRANSLATIONS
 from widgets import (ToastNotification, SearchLineEdit, FadeStackedWidget)
 from config import load_settings, save_settings, load_history, save_history
@@ -798,8 +799,58 @@ class RubiAUR(QMainWindow):
 
     
     def run_install_action(self, action, source_type, pkg):
+        if source_type == "aur" and action in ["install", "update_app"]:
+            if hasattr(self, 'page_detail'):
+                self.page_detail.install_status_lbl.setText(self.tr("analyzing_security"))
+                self.page_detail.pacman_anim.show()
+                self.page_detail.pacman_anim.start()
+            
+            self.security_worker = SecurityScannerWorker(pkg)
+            self.security_worker.signals.finished.connect(lambda clean, threats, code: self.on_security_scan_finished(clean, threats, code, action, source_type, pkg))
+            self.security_worker.signals.error.connect(lambda err: self.on_security_scan_error(err, action, source_type, pkg))
+            self.thread_pool.start(self.security_worker)
+        else:
+            self._execute_install(action, source_type, pkg)
+
+    def _execute_install(self, action, source_type, pkg):
         aur_backend = self.page_settings.aur_cb.currentText() if hasattr(self, 'page_settings') else "yay"
         self.install_worker.run_command(action, source_type, pkg, aur_backend=aur_backend)
+
+    def on_security_scan_error(self, err, action, source_type, pkg):
+        print(f"Security scanner error: {err}")
+        self._execute_install(action, source_type, pkg)
+
+    def on_security_scan_finished(self, is_clean, threats, code, action, source_type, pkg):
+        if hasattr(self, 'page_detail'):
+            self.page_detail.pacman_anim.stop()
+            self.page_detail.pacman_anim.hide()
+            
+        msg = QMessageBox(self)
+        msg.setWindowTitle("RubiAUR Security")
+        msg.setTextFormat(Qt.RichText)
+        
+        if is_clean:
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText(self.tr("aur_warning_clean"))
+        else:
+            msg.setIcon(QMessageBox.Critical)
+            threat_str = "<br>".join(threats)
+            msg.setText(self.tr("aur_warning_malware").format(threats=threat_str))
+            
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg.setDefaultButton(QMessageBox.No)
+        
+        result = msg.exec()
+        if result == QMessageBox.Yes:
+            if hasattr(self, 'page_detail'):
+                self.page_detail.install_status_lbl.setText("Instalando desde AUR..." if self.app_settings.get("lang",1)==0 else "Installing from AUR...")
+                self.page_detail.pacman_anim.show()
+                self.page_detail.pacman_anim.start()
+            self._execute_install(action, source_type, pkg)
+        else:
+            if hasattr(self, 'page_detail'):
+                self.page_detail.progress_container.hide()
+                self.page_detail.btn_row_container.show()
         
     def cancel_installation(self):
         self.install_worker.cancel()

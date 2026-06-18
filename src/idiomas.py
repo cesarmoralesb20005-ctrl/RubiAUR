@@ -99,5 +99,8 @@ TRANSLATIONS = {
     # Enlaces de la aplicación (¡Sin emojis!)
     "official_web": {0: "Sitio Web Oficial", 1: "Official Website", 2: "Site Web Officiel", 3: "Offizielle Website"},
     "pkg_source": {0: "Ver Paquete / Fuente", 1: "View Package / Source", 2: "Voir le Paquet / Source", 3: "Paket / Quelle ansehen"},
-    "nothing_to_do": {0: "Nada que hacer", 1: "Nothing to do", 2: "Rien à faire", 3: "Nichts zu tun"}
+    "nothing_to_do": {0: "Nada que hacer", 1: "Nothing to do", 2: "Rien à faire", 3: "Nichts zu tun"},
+    "analyzing_security": {0: "Analizando seguridad...", 1: "Analyzing security...", 2: "Analyse de sécurité...", 3: "Sicherheit analysieren..."},
+    "aur_warning_clean": {0: "Este paquete proviene de AUR (mantenido por la comunidad).<br><br><b>Análisis Heurístico:</b> Limpio ✔️<br>Instala bajo tu propio riesgo. ¿Continuar?", 1: "This package comes from AUR (community maintained).<br><br><b>Heuristic Analysis:</b> Clean ✔️<br>Install at your own risk. Continue?", 2: "Ce paquet provient de l'AUR (maintenu par la communauté).<br><br><b>Analyse heuristique :</b> Propre ✔️<br>Installez à vos risques et périls. Continuer ?", 3: "Dieses Paket stammt vom AUR (Community-gepflegt).<br><br><b>Heuristische Analyse:</b> Sauber ✔️<br>Installation auf eigene Gefahr. Fortfahren?"},
+    "aur_warning_malware": {0: "¡PELIGRO! Se detectó código sospechoso en el PKGBUILD:<br><br>{threats}<br><br><b>¿Estás seguro de que quieres continuar?</b>", 1: "DANGER! Suspicious code detected in the PKGBUILD:<br><br>{threats}<br><br><b>Are you sure you want to continue?</b>", 2: "DANGER ! Code suspect détecté dans le PKGBUILD :<br><br>{threats}<br><br><b>Êtes-vous sûr de vouloir continuer ?</b>", 3: "GEFAHR! Verdächtiger Code im PKGBUILD entdeckt:<br><br>{threats}<br><br><b>Sind Sie sicher, dass Sie fortfahren möchten?</b>"}
 }
