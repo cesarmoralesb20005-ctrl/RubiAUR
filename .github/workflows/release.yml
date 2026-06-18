@@ -28,6 +28,10 @@ jobs:
         pip install PySide6 pyinstaller
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
+    - name: Generate Build Info
+      run: |
+        echo "BUILD_DATE = '$(date -u +"%Y-%m-%dT%H:%M:%SZ")'" > src/build_info.py
+
     - name: Build RubiAUR Binary
       run: |
         # Compilar la aplicación principal (Se nombra como AppImage según tu estructura)

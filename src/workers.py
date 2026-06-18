@@ -447,15 +447,34 @@ class SelfUpdateWorker(QObject):
     def check(self, current_version):
         def run():
             try:
-                url = "https://api.github.com/repos/cesarmoralesb20005-ctrl/RubiAUR/releases/latest"
+                # Consultar la etiqueta específica 'latest' (compilación continua)
+                url = "https://api.github.com/repos/cesarmoralesb20005-ctrl/RubiAUR/releases/tags/latest"
                 res = requests.get(url, timeout=5).json()
-                latest_ver = res.get("tag_name", "0.0.0").replace("v", "")
+                
+                if "published_at" not in res:
+                    self.result.emit(False, "", "")
+                    return
+                
+                remote_date_str = res["published_at"]
                 link = res.get("html_url", "")
                 
-                if latest_ver > current_version.replace("v", ""):
-                    self.result.emit(True, latest_ver, link)
+                try:
+                    from build_info import BUILD_DATE
+                    local_date_str = BUILD_DATE
+                except ImportError:
+                    # Si ejecutamos localmente sin compilar, usamos una fecha vieja
+                    local_date_str = "2000-01-01T00:00:00Z"
+                
+                from datetime import datetime
+                remote_date = datetime.strptime(remote_date_str, "%Y-%m-%dT%H:%M:%SZ")
+                local_date = datetime.strptime(local_date_str, "%Y-%m-%dT%H:%M:%SZ")
+                
+                if remote_date > local_date:
+                    # Formatear la fecha para mostrarla al usuario
+                    display_date = remote_date.strftime("%d/%m/%Y %H:%M")
+                    self.result.emit(True, f"Actualización ({display_date})", link)
                 else:
-                    self.result.emit(False, latest_ver, link)
+                    self.result.emit(False, "", link)
             except Exception:
                 self.result.emit(False, "", "")
                 
