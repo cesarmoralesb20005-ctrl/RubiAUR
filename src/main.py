@@ -687,22 +687,8 @@ class RubiAUR(QMainWindow):
                 else: self.clear_layout(item.layout())
 
     def add_gallery_image(self, img_data):
-        pixmap = QPixmap()
-        pixmap.loadFromData(img_data)
-        if not pixmap.isNull():
-            scaled = pixmap.scaledToHeight(270, Qt.SmoothTransformation)
-            rounded = QPixmap(scaled.size())
-            rounded.fill(Qt.transparent)
-            painter = QPainter(rounded)
-            painter.setRenderHint(QPainter.Antialiasing)
-            path = QPainterPath()
-            path.addRoundedRect(0, 0, scaled.width(), scaled.height(), 16, 16)
-            painter.setClipPath(path)
-            painter.drawPixmap(0, 0, scaled)
-            painter.end()
-            lbl = QLabel()
-            lbl.setPixmap(rounded)
-            self.gallery_container_lay.addWidget(lbl)
+        if hasattr(self, 'page_detail'):
+            self.page_detail.add_gallery_image(img_data)
             
     def apply_icon(self, app_name, img_data):
         self.icon_cache[app_name] = img_data
@@ -797,7 +783,8 @@ class RubiAUR(QMainWindow):
                 class UIUpdater(QObject):
                     update_signal = Signal(dict)
                 updater = UIUpdater()
-                updater.update_signal.connect(self._prepare_detail_view)
+                updater.update_signal.connect(lambda d: setattr(self, 'current_app_data', d))
+                updater.update_signal.connect(lambda d: self.page_detail.prepare_view(d) if hasattr(self, 'page_detail') else None)
                 updater.update_signal.emit(res_dict)
                 
         threading.Thread(target=fetch_exact).start()
@@ -950,9 +937,15 @@ class RubiAUR(QMainWindow):
         msg = QMessageBox(self)
         msg.setWindowTitle(self.tr("about_btn"))
         msg.setTextFormat(Qt.RichText)
-        msg.setText(self.tr("about_text"))
         
-        logo_pixmap = QIcon(get_resource_path("logo.svg")).pixmap(64, 64)
+        # Insertamos la versión dinámicamente y usamos el logo de la empresa
+        about_text_with_version = self.tr("about_text").replace("1.30", self.CURRENT_VERSION)
+        msg.setText(about_text_with_version)
+        
+        # Usamos el logo de la empresa según el tema
+        logo_name = "moralesb7-logo-vector-dark.svg" if self.is_dark else "moralesb7-logo-vector.svg"
+        logo_pixmap = QIcon(get_resource_path(logo_name)).pixmap(180, 60)
+        
         if not logo_pixmap.isNull():
             msg.setIconPixmap(logo_pixmap)
         

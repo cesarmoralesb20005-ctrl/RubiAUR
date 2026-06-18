@@ -114,11 +114,6 @@ class SettingsPage(QWidget):
         self.set_lay.addSpacing(5)
         self.set_lay.addWidget(self.about_btn, alignment=Qt.AlignCenter)
 
-        self.company_logo_lbl = QLabel()
-        self.company_logo_lbl.setAlignment(Qt.AlignCenter)
-        self.set_lay.addSpacing(20)
-        self.set_lay.addWidget(self.company_logo_lbl, alignment=Qt.AlignCenter)
-
         set_scroll.setWidget(set_container)
         settings_page_layout.addWidget(set_scroll)
 
@@ -173,8 +168,6 @@ class SettingsPage(QWidget):
                             d_lbl.setText(tr_func(d_lbl.property("trans_key")))
                             
     def update_theme(self, is_dark):
-        logo_name = "moralesb7-logo-vector-dark.svg" if is_dark else "moralesb7-logo-vector.svg"
-        self.company_logo_lbl.setPixmap(QIcon(get_resource_path(logo_name)).pixmap(180, 60))
         self.set_back_btn.setIcon(get_ui_icon("back", is_dark))
 
 class InstalledPage(QWidget):
@@ -366,7 +359,11 @@ class InstalledPage(QWidget):
     def update_texts(self, tr_func):
         self.inst_back_btn.setText(f" {tr_func('back_btn')}")
         self.inst_search_bar.setPlaceholderText(tr_func("filter_inst"))
-        if self.clean_sys_btn.text(): self.clean_sys_btn.setText(tr_func("clean_sys"))
+        if self.clean_sys_btn.text() not in [tr_func("cleaning")]:
+            self.clean_sys_btn.setText(tr_func("clean_sys"))
+        if self.check_sys_btn.text() not in [tr_func("checking")]:
+            self.check_sys_btn.setText(tr_func("check_sys"))
+        self.update_sys_btn.setText(tr_func("inst_sys"))
         
     def update_theme(self, is_dark):
         self.is_dark = is_dark
@@ -895,6 +892,28 @@ class DetailPage(QWidget):
         self.icon_lab.setStyleSheet("background-color: transparent;")
         self.icon_lab.setPixmap(pixmap)
 
+
+    def add_gallery_image(self, img_data):
+        from PySide6.QtGui import QPixmap, QPainter, QPainterPath
+        from PySide6.QtWidgets import QLabel
+        from PySide6.QtCore import Qt
+        pixmap = QPixmap()
+        pixmap.loadFromData(img_data)
+        if not pixmap.isNull():
+            scaled = pixmap.scaledToHeight(270, Qt.SmoothTransformation)
+            rounded = QPixmap(scaled.size())
+            rounded.fill(Qt.transparent)
+            painter = QPainter(rounded)
+            painter.setRenderHint(QPainter.Antialiasing)
+            path = QPainterPath()
+            path.addRoundedRect(0, 0, scaled.width(), scaled.height(), 16, 16)
+            painter.setClipPath(path)
+            painter.drawPixmap(0, 0, scaled)
+            painter.end()
+            lbl = QLabel()
+            lbl.setPixmap(rounded)
+            self.gallery_container_lay.addWidget(lbl)
+
     def prepare_view(self, data):
         self.current_app_data = data
         self.name_lab.setText(data['name'])
@@ -904,8 +923,8 @@ class DetailPage(QWidget):
         self.set_placeholder_icon(data['name'][0].upper())
         self.source_selector.clear()
         
-        if data.get('has_pacman'): self.source_selector.addItem("Repositorios (Pacman)", "pacman")
-        if data.get('has_aur'): self.source_selector.addItem("AUR (Comunidad)", "aur")
+        if data.get('has_pacman'): self.source_selector.addItem(QIcon(get_resource_path("pacman.svg")), "Pacman", "pacman")
+        if data.get('has_aur'): self.source_selector.addItem(QIcon(get_resource_path("aur.svg")), "AUR (Comunidad)", "aur")
         
         if self.source_selector.count() > 0:
             self.source_selector.setCurrentIndex(0)
@@ -962,15 +981,23 @@ class DetailPage(QWidget):
         
         if detailed_data.get('official_url'):
             self.web_btn.setText(" " + self.tr("official_web"))
-            try: self.web_btn.clicked.disconnect() 
-            except Exception: pass
+            try:
+                import warnings
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", RuntimeWarning)
+                    self.web_btn.clicked.disconnect()
+            except RuntimeError: pass
             self.web_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(detailed_data['official_url'])))
             self.web_btn.show()
             
         if detailed_data.get('source_url'):
             self.source_btn.setText(" " + self.tr("pkg_source"))
-            try: self.source_btn.clicked.disconnect() 
-            except Exception: pass
+            try:
+                import warnings
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", RuntimeWarning)
+                    self.source_btn.clicked.disconnect()
+            except RuntimeError: pass
             self.source_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(detailed_data['source_url'])))
             self.source_btn.show()
 
