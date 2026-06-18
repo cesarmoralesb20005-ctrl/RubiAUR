@@ -131,9 +131,16 @@ class InstallWorker(QObject):
                     cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
                 )
                 
+                last_lines = []
                 for line in iter(self.process.stdout.readline, ''):
                     if self.is_cancelled: break
-                    if line: self.progress.emit(line.strip(), action)
+                    if line: 
+                        clean_line = line.strip()
+                        if clean_line:
+                            last_lines.append(clean_line)
+                            if len(last_lines) > 3:
+                                last_lines.pop(0)
+                        self.progress.emit(clean_line, action)
                 
                 self.process.stdout.close()
                 return_code = self.process.wait()
@@ -143,7 +150,8 @@ class InstallWorker(QObject):
                 elif return_code == 0: 
                     self.finished.emit(True, "Éxito", action)
                 else: 
-                    self.finished.emit(False, "Ocurrió un error. Revisa la consola o verifica tu conexión.", action)
+                    error_msg = " | ".join(last_lines) if last_lines else "Código de error: " + str(return_code)
+                    self.finished.emit(False, error_msg, action)
             except Exception as e:
                 if not self.is_cancelled:
                     self.finished.emit(False, str(e), action)

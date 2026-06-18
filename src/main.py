@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QFrame, QComboBox, QStackedWidget, QScrollArea, QGridLayout,
                              QMessageBox, QGraphicsOpacityEffect, QListWidget, QListWidgetItem,
                              QGraphicsDropShadowEffect, QStyledItemDelegate, QSizePolicy)
-from PySide6.QtCore import Qt, Signal, QObject, QPropertyAnimation, QEasingCurve, QSize, QPoint, QTimer, QSequentialAnimationGroup, QUrl
+from PySide6.QtCore import Qt, Signal, QObject, QPropertyAnimation, QEasingCurve, QSize, QPoint, QTimer, QSequentialAnimationGroup, QUrl, QThreadPool
 from PySide6.QtGui import QFont, QPixmap, QImage, QPainter, QPainterPath, QIcon, QColor, QPen, QPalette, QDesktopServices
 from constantes import HOME_CATEGORIES
 from utils import get_resource_path, get_ui_icon, get_local_icon, create_rounded_pixmap, is_aur_helper_installed
@@ -757,6 +757,13 @@ class RubiAUR(QMainWindow):
 
     def quick_search(self, query):
         self.navigate_to(2)
+        
+        # Guardar en historial
+        if query in self.search_history:
+            self.search_history.remove(query)
+        self.search_history.append(query)
+        self.save_history()
+        
         if hasattr(self, 'page_detail'):
             self.page_detail.name_lab.setText(self.tr("loading"))
             self.page_detail.desc_lab.setText(self.tr("fetching_info"))
@@ -796,6 +803,14 @@ class RubiAUR(QMainWindow):
             self.page_detail.prepare_view(data)
         self.current_app_data = data
         self.detail_worker.load_details(data)
+        
+        # Guardar en historial
+        app_name = data.get("name")
+        if app_name:
+            if app_name in self.search_history:
+                self.search_history.remove(app_name)
+            self.search_history.append(app_name)
+            self.save_history()
 
     
     def run_install_action(self, action, source_type, pkg):
@@ -808,7 +823,7 @@ class RubiAUR(QMainWindow):
             self.security_worker = SecurityScannerWorker(pkg)
             self.security_worker.signals.finished.connect(lambda clean, threats, code: self.on_security_scan_finished(clean, threats, code, action, source_type, pkg))
             self.security_worker.signals.error.connect(lambda err: self.on_security_scan_error(err, action, source_type, pkg))
-            self.thread_pool.start(self.security_worker)
+            QThreadPool.globalInstance().start(self.security_worker)
         else:
             self._execute_install(action, source_type, pkg)
 
@@ -851,10 +866,14 @@ class RubiAUR(QMainWindow):
             if hasattr(self, 'page_detail'):
                 self.page_detail.progress_container.hide()
                 self.page_detail.btn_row_container.show()
+                self.page_detail.active_install_pkg = None
+                self.page_detail.active_install_action = None
+                self.page_detail.active_install_source = None
         
     def cancel_installation(self):
         self.install_worker.cancel()
-        self.install_status_lbl.setText("Cancelando..." if self.app_settings.get("lang",1)==0 else "Cancelling...")
+        if hasattr(self, 'page_detail'):
+            self.page_detail.install_status_lbl.setText("Cancelando..." if self.app_settings.get("lang",1)==0 else "Cancelling...")
 
     def update_install_progress(self, text, action):
         clean_text = text.replace('\n', '').strip()
@@ -906,7 +925,7 @@ class RubiAUR(QMainWindow):
                     self.open_installed()
         else:
             if action != "clean_sys":
-                self.toast = ToastNotification(self.centralWidget(), "Error", "Error de red" if self.app_settings.get("lang",1)==0 else "Network Error", self.is_dark)
+                self.toast = ToastNotification(self.centralWidget(), "Error", message, self.is_dark)
                 self.toast.show_anim()
                 if action in ["install", "uninstall", "update_app"]:
                     if hasattr(self, 'page_detail'): self.page_detail.detail_spinner.start()
@@ -1043,7 +1062,13 @@ class RubiAUR(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    app.setStyle("Fusion") 
+    app.setStyle("Fusion")
+    
+    # Intentar usar temas modernos si el de Qt actual (como oxygen) no tiene iconos
+    from PySide6.QtGui import QIcon
+    if QIcon.themeName() not in ["breeze", "breeze-dark", "Tela", "Tela-dark", "papirus"]:
+        QIcon.setFallbackThemeName("breeze")
+        
     window = RubiAUR()
     window.show()
     sys.exit(app.exec())

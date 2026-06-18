@@ -1,5 +1,6 @@
 import sys
 import os
+import glob
 import math
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QPainter, QPainterPath, QColor, QPen, QIcon
@@ -113,24 +114,63 @@ def get_ui_icon(icon_name, is_dark, custom_color=None):
     painter.end()
     return QIcon(pixmap)
 
-def get_local_icon(app_name, size):
+def get_local_icon(app_name, size=64):
     clean = app_name.lower().replace("-bin", "").replace("-git", "").replace("-desktop", "").replace("-stable", "").replace("-launcher", "")
+    
+    # Intento 1: Nombre directo
     icon = QIcon.fromTheme(clean)
     if not icon.isNull(): return icon.pixmap(size, size)
+    
+    # Intento 2: Buscar en archivos .desktop
+    desktop_dirs = ['/usr/share/applications', os.path.expanduser('~/.local/share/applications')]
+    for d in desktop_dirs:
+        if not os.path.exists(d): continue
+        for f_path in glob.glob(os.path.join(d, f"*{clean}*.desktop")) + glob.glob(os.path.join(d, f"*{clean.split('-')[0]}*.desktop")):
+            try:
+                with open(f_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    for line in f:
+                        if line.startswith('Icon='):
+                            icon_name = line.strip().split('=')[1]
+                            icon = QIcon.fromTheme(icon_name)
+                            if not icon.isNull(): 
+                                return icon.pixmap(size, size)
+            except Exception:
+                pass
+                
+    # Intento 3: Partes del nombre
     parts = clean.split('-')
     if len(parts) > 1:
         icon = QIcon.fromTheme(parts[0])
         if not icon.isNull(): return icon.pixmap(size, size)
+        
+    # Intento 4: Mapeos manuales fuertes
     mappings = {
         "visual-studio-code": "code", "google-chrome": "google-chrome", "discord": "discord",
         "spotify": "spotify-client", "heroic-games": "heroic", "minecraft": "minecraft-launcher",
         "intellij-idea-community-edition": "intellij-idea", "pycharm-community-edition": "pycharm",
-        "libreoffice-fresh": "libreoffice-main"
+        "libreoffice-fresh": "libreoffice-main", "flameshot": "flameshot", "copyq": "copyq",
+        "galculator": "galculator", "docker": "docker", "postman": "postman", "podman": "podman"
     }
     for key, val in mappings.items():
         if key in clean:
             icon = QIcon.fromTheme(val)
             if not icon.isNull(): return icon.pixmap(size, size)
+            
+    # Intento 5: Búsqueda manual profunda en el sistema de archivos
+    themes = ["Tela", "Tela-dark", "breeze", "breeze-dark", "hicolor"]
+    sizes_dirs = ["scalable/apps", "apps/scalable", "64x64/apps", "apps/64", "48x48/apps", "apps/48"]
+    search_names = [clean]
+    if clean in mappings:
+        search_names.append(mappings[clean])
+    
+    for theme in themes:
+        for size_dir in sizes_dirs:
+            for sname in search_names:
+                for ext in ["svg", "png"]:
+                    p = f"/usr/share/icons/{theme}/{size_dir}/{sname}.{ext}"
+                    if os.path.exists(p):
+                        return QIcon(p).pixmap(size, size)
+                        
     return None
 
 def create_rounded_pixmap(pixmap, size, radius):
