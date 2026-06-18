@@ -12,7 +12,7 @@ from workers import (AutocompleteWorker, CheckUpdateWorker, InstallWorker,
                      InstalledAppsWorker, CategoryWorker, IconWorker, 
                      SearchListWorker, DetailWorker, AurInstallerWorker, SelfUpdateWorker, GalleryWorker)
 from idiomas import TRANSLATIONS
-from widgets import (ToastNotification, LoadingSpinner, PacmanProgress, SearchLineEdit, FadeStackedWidget, HomeAppCard, AppListItem, FeaturedAppCard)
+from widgets import (ToastNotification, SearchLineEdit, FadeStackedWidget)
 from config import load_settings, save_settings, load_history, save_history
 from style import get_stylesheet
 from pages import SettingsPage
@@ -47,9 +47,7 @@ class RubiAUR(QMainWindow):
         self.active_install_action = None
         self.active_install_source = None
         
-        self.cat_buttons = {} 
-        self.settings_labels = [] 
-        
+                        
         theme_val = self.app_settings.get("theme", 0)
         if theme_val == 0:
             self.is_dark = QApplication.palette().color(QPalette.Window).lightness() < 128
@@ -82,19 +80,9 @@ class RubiAUR(QMainWindow):
         self.check_worker.sys_result.connect(self.on_sys_update_checked)
         
         self.current_app_data = {}
-        self.home_cards_refs = {} 
-        self.list_items_refs = {} 
-        
-        self.all_installed_results = []
-        self.filtered_installed_results = []
-        self.current_inst_index = 0
-        self.inst_load_more_container = None
-
-        self.current_cat_name = ""
-        self.current_cat_apps = []
-        self.current_cat_index = 0
-        self.cat_load_more_container = None
-
+                        
+                                
+                                
         self.light_style = """
             QMainWindow, #CentralWidget, #MainBg { background-color: #F5F5F7; }
             #Header { background-color: #FFFFFF; border-bottom: 1px solid rgba(0,0,0,0.05); }
@@ -245,8 +233,7 @@ class RubiAUR(QMainWindow):
         if hasattr(self, 'page_home'):
             self.page_home.update_texts(self.tr)
             self.page_home.update_lang(self.app_settings.get("lang", 1))
-        
-        
+
         
         if hasattr(self, 'page_inst'):
             if hasattr(self.page_inst, 'all_installed_results'):
@@ -522,8 +509,7 @@ class RubiAUR(QMainWindow):
         if hasattr(self, 'page_detail'): self.page_detail.update_theme(self.is_dark)
         if hasattr(self, 'page_setup'): self.page_setup.update_theme(self.is_dark)
         
-        if hasattr(self, 'inst_spinner') and self.inst_spinner: self.inst_spinner.update_theme(self.is_dark)
-        if hasattr(self, 'pacman_anim') and self.pacman_anim: self.pacman_anim.update_theme(self.is_dark)
+        
         if hasattr(self, 'setup_spinner') and self.setup_spinner: self.setup_spinner.update_theme(self.is_dark)
         
         if hasattr(self, 'page_settings'):
