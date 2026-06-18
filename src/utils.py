@@ -9,11 +9,15 @@ def is_aur_helper_installed():
     """Devuelve True si yay o paru están instalados en el sistema."""
     return bool(shutil.which("yay") or shutil.which("paru"))
 
-# --- RUTAS ABSOLUTAS (MAGIA PARA PYINSTALLER/APPIMAGE) ---
 def get_resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), relative_path)
+    # Buscar en la carpeta assets un nivel arriba de src
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    asset_path = os.path.join(base_path, "..", "assets", relative_path)
+    if os.path.exists(asset_path):
+        return asset_path
+    return os.path.join(base_path, relative_path)
 
 
 def get_ui_icon(icon_name, is_dark, custom_color=None):

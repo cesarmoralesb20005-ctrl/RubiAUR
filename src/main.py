@@ -14,13 +14,14 @@ from workers import (AutocompleteWorker, CheckUpdateWorker, InstallWorker,
 from idiomas import TRANSLATIONS
 from widgets import (ToastNotification, LoadingSpinner, PacmanProgress, SearchLineEdit, FadeStackedWidget, HomeAppCard, AppListItem, FeaturedAppCard)
 from config import load_settings, save_settings, load_history, save_history
-from style import LIGHT_STYLE, DARK_STYLE
+from style import get_stylesheet
 
 # --- 4. INTERFAZ PRINCIPAL ---
 class RubiAUR(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("RubiAUR")
+        self.setWindowIcon(QIcon(get_resource_path("logo.svg")))
         self.setMinimumSize(750, 550) 
         self.resize(900, 650)
         
@@ -961,7 +962,7 @@ class RubiAUR(QMainWindow):
         else:
             self.is_dark = (theme_val == 2)
             
-        self.setStyleSheet(DARK_STYLE if self.is_dark else LIGHT_STYLE)
+        self.setStyleSheet(get_stylesheet(self.is_dark))
 
         if hasattr(self, 'logo_btn'): self.logo_btn.setIcon(QIcon(get_resource_path("logo.svg")))
         if hasattr(self, 'installed_btn'): self.installed_btn.setIcon(get_ui_icon("installed", self.is_dark))
