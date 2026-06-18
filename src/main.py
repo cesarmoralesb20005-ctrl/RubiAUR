@@ -57,13 +57,13 @@ class RubiAUR(QMainWindow):
             self.is_dark = (theme_val == 2)
         
         self.search_worker = SearchListWorker()
-        self.search_worker.finished.connect(self.populate_list)
+        self.search_worker.finished.connect(lambda r: self.page_list.populate_list(r) if hasattr(self, 'page_list') else None)
         self.category_worker = CategoryWorker()
-        self.category_worker.finished.connect(self.populate_category)
+        self.category_worker.finished.connect(lambda r, c: self.page_list.populate_category(r, c) if hasattr(self, 'page_list') else None)
         self.installed_worker = InstalledAppsWorker()
-        self.installed_worker.finished.connect(self.populate_installed)
+        self.installed_worker.finished.connect(lambda r: self.page_inst.populate_installed(r) if hasattr(self, 'page_inst') else None)
         self.detail_worker = DetailWorker()
-        self.detail_worker.finished.connect(self.update_detail_ui)
+        self.detail_worker.finished.connect(lambda r: self.page_detail.update_ui(r) if hasattr(self, 'page_detail') else None)
         self.icon_worker = IconWorker()
         self.icon_worker.icon_data_ready.connect(self.apply_icon)
         
@@ -202,7 +202,7 @@ class RubiAUR(QMainWindow):
         if not is_aur_helper_installed():
             self.header_frame.hide()
             self.stacked.setCurrentIndex(5) 
-            self.setup_lbl.setText(self.tr("installing_yay"))
+            if hasattr(self, 'page_setup'): self.page_setup.set_status(self.tr, "installing_yay")
             
             self.aur_installer = AurInstallerWorker()
             self.aur_installer.finished.connect(self.on_aur_installed)
@@ -237,45 +237,28 @@ class RubiAUR(QMainWindow):
         self.installed_btn.setText(f" {self.tr('installed_btn')}")
         if hasattr(self, 'page_settings'):
             self.page_settings.update_texts(self.tr)
+        if hasattr(self, 'page_list'):
+            self.page_list.update_texts(self.tr)
+        if hasattr(self, 'page_detail'):
+            self.page_detail.update_texts(self.tr)
         
-        self.home_title_lbl.setText(self.tr("discover_title"))
-        for cat_key, btn in self.cat_buttons.items():
-            btn.setText(f"{self.tr(cat_key)}  >")
-            
-        for app_name, card in self.home_cards_refs.items():
-            card.update_lang(self.app_settings.get("lang", 1))
-            
-        self.list_back_btn.setText(f" {self.tr('back_btn')}")
-        self.back_btn.setText(f" {self.tr('back_btn')}")
-        self.reviews_label.setText(self.tr("comm_info"))
-        self.gallery_label.setText("Galería de Imágenes" if self.app_settings.get("lang", 1) == 0 else "Image Gallery")
-        self.gallery_warn.setText("Nota: Imágenes extraídas de Flathub. Pueden diferir del empaquetado AUR." if self.app_settings.get("lang", 1) == 0 else "Note: Images provided by Flathub. May differ from AUR package.")
-        self.cancel_install_btn.setText(self.tr("cancel_btn"))
+        if hasattr(self, 'page_home'):
+            self.page_home.update_texts(self.tr)
+            self.page_home.update_lang(self.app_settings.get("lang", 1))
         
-        if self.install_btn.text() in ["Obtener", "Get"]: self.install_btn.setText(self.tr("get_btn"))
-        if self.install_btn.text() in ["Desinstalar", "Uninstall"]: self.install_btn.setText(self.tr("uninstall_btn"))
-        self.open_btn.setText(self.tr("open_btn"))
-        if self.check_app_btn.text() in ["Buscar actualización", "Check for update"]: self.check_app_btn.setText(self.tr("check_up_btn"))
-        if self.check_app_btn.text() in ["Actualizado", "Up to date"]: self.check_app_btn.setText(self.tr("app_updated"))
         
-        self.inst_back_btn.setText(f" {self.tr('back_btn')}")
         
-        if hasattr(self, 'all_installed_results'):
-            self.inst_title.setText(f"{self.tr('inst_title')} ({len(self.all_installed_results)})")
-        else:
-            self.inst_title.setText(self.tr("inst_title"))
-            
-        self.clean_sys_btn.setText(self.tr("clean_sys"))
-        if self.check_sys_btn.text() in ["Buscar Actualizaciones", "Check for Updates"]: self.check_sys_btn.setText(self.tr("check_sys"))
-        if self.check_sys_btn.text() in ["Sistema actualizado", "System up to date"]: self.check_sys_btn.setText(self.tr("sys_updated"))
-        if self.update_sys_btn.text() in ["Instalar Actualizaciones", "Install Updates"]: self.update_sys_btn.setText(self.tr("inst_sys"))
-        self.inst_search_bar.setPlaceholderText(self.tr("filter_inst"))
-        pass            
+        if hasattr(self, 'page_inst'):
+            if hasattr(self.page_inst, 'all_installed_results'):
+                self.page_inst.inst_title.setText(f"{self.tr('inst_title')} ({len(self.page_inst.all_installed_results)})")
+            else:
+                self.page_inst.inst_title.setText(self.tr("inst_title"))
+            self.page_inst.update_texts(self.tr)
         if hasattr(self, 'page_settings'):
             self.refresh_combo_box(self.page_settings.theme_cb, ["opt_auto", "opt_light", "opt_dark"])
             self.refresh_combo_box(self.page_settings.clean_cb, ["opt_clean_auto", "opt_clean_man"])
             self.refresh_combo_box(self.page_settings.up_cb, ["opt_up_start", "opt_up_no"])
-        self.setup_lbl.setText(self.tr("installing_yay"))
+        if hasattr(self, 'page_setup'): self.page_setup.set_status(self.tr, "installing_yay")
 
         if hasattr(self, 'yay_card'):
             self.yay_card.update_texts(self.tr("feat_badge"), self.tr("yay_desc"))
@@ -470,373 +453,38 @@ class RubiAUR(QMainWindow):
         self.stacked.currentChanged.connect(self.update_nav_state)
         
         # --- PANTALLA 0: INICIO ---
-        self.page_home = QWidget(); self.page_home.setObjectName("MainBg")
-        home_layout = QVBoxLayout(self.page_home)
-        home_layout.setContentsMargins(0,0,0,0)
-        home_scroll = QScrollArea()
-        home_scroll.setWidgetResizable(True)
-        home_content = QWidget(); home_content.setObjectName("MainBg")
-        hc_layout = QVBoxLayout(home_content)
-        hc_layout.setContentsMargins(50, 40, 50, 40)
-        
-        self.home_title_lbl = QLabel()
-        self.home_title_lbl.setFont(QFont("SF Pro Display", 32, QFont.Bold))
-        hc_layout.addWidget(self.home_title_lbl)
-        hc_layout.addSpacing(20)
-
-        # --- BANNERS DESTACADOS ---
-        featured_lay = QHBoxLayout()
-        featured_lay.setSpacing(20)
-        
-        self.yay_card = FeaturedAppCard("yay", "Yay", self.tr("yay_desc"), "#0071E3", self.tr("feat_badge")) 
-        self.yay_card.clicked.connect(self.quick_search)
-        
-        self.paru_card = FeaturedAppCard("paru", "Paru", self.tr("paru_desc"), "#2C2C2E", self.tr("feat_badge")) 
-        self.paru_card.clicked.connect(self.quick_search)
-        
-        featured_lay.addWidget(self.yay_card)
-        featured_lay.addWidget(self.paru_card)
-        
-        hc_layout.addLayout(featured_lay)
-        hc_layout.addSpacing(40)
-        
-        for cat_name, apps in HOME_CATEGORIES.items():
-            cat_key = f"cat_{cat_name}"
-            cat_btn = QPushButton()
-            cat_btn.setObjectName("CategoryTitleBtn")
-            cat_btn.setCursor(Qt.PointingHandCursor)
-            cat_btn.clicked.connect(lambda checked, c=cat_name: self.open_category(c))
-            hc_layout.addWidget(cat_btn)
-            self.cat_buttons[cat_key] = cat_btn
-            
-            grid = QGridLayout()
-            grid.setSpacing(15)
-            row, col = 0, 0
-            
-            for app_name, desc_dict in apps[:4]:
-                card = HomeAppCard(app_name, desc_dict, self.app_settings.get("lang", 1))
-                card.clicked.connect(self.quick_search)
-                self.home_cards_refs[app_name] = card
-                grid.addWidget(card, row, col)
-                col += 1
-                if col > 1:
-                    col = 0
-                    row += 1
-            hc_layout.addLayout(grid)
-            hc_layout.addSpacing(40)
-            
-        hc_layout.addStretch()
-        home_scroll.setWidget(home_content)
-        home_layout.addWidget(home_scroll)
+        from pages import SettingsPage, InstalledPage, HomePage
+        # --- PANTALLA 0: INICIO ---
+        self.page_home = HomePage(self)
+        self.page_home.quick_search_requested.connect(self.quick_search)
+        self.page_home.open_category_requested.connect(self.open_category)
         self.stacked.addWidget(self.page_home)
 
         # --- PANTALLA 1: RESULTADOS ---
-        self.page_list = QWidget(); self.page_list.setObjectName("MainBg")
-        list_page_layout = QVBoxLayout(self.page_list)
-        list_page_layout.setContentsMargins(50, 10, 50, 40)
-        
-        self.list_back_btn = QPushButton()
-        self.list_back_btn.setIconSize(QSize(18, 18))
-        self.list_back_btn.setObjectName("BackBtn")
-        self.list_back_btn.setCursor(Qt.PointingHandCursor)
-        self.list_back_btn.clicked.connect(self.go_home_from_list)
-        list_page_layout.addWidget(self.list_back_btn)
-
-        status_lay = QHBoxLayout()
-        self.status_lbl = QLabel("")
-        self.status_lbl.setFont(QFont("SF Pro Text", 18, QFont.Bold))
-        self.list_spinner = LoadingSpinner(size=24)
-        self.list_spinner.hide()
-        status_lay.addWidget(self.status_lbl)
-        status_lay.addWidget(self.list_spinner)
-        status_lay.addStretch()
-        list_page_layout.addLayout(status_lay)
-        
-        list_page_layout.addSpacing(10)
-        
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        self.list_container = QFrame()
-        self.list_container.setObjectName("ListContainer")
-        self.list_layout = QVBoxLayout(self.list_container)
-        self.list_layout.setAlignment(Qt.AlignTop)
-        self.scroll_area.setWidget(self.list_container)
-        list_page_layout.addWidget(self.scroll_area)
+        from pages import ListPage
+        self.page_list = ListPage(self)
+        self.page_list.back_requested.connect(self.go_home_from_list)
+        self.page_list.app_selected.connect(self.open_app_details_from_list)
+        self.page_list.icons_requested.connect(self.request_icons)
         self.stacked.addWidget(self.page_list)
 
         # --- PANTALLA 2: DETALLES ---
-        self.page_detail = QWidget(); self.page_detail.setObjectName("MainBg")
-        detail_scroll = QScrollArea()
-        detail_scroll.setWidgetResizable(True)
-        detail_content = QWidget(); detail_content.setObjectName("MainBg")
-        detail_layout = QVBoxLayout(detail_content)
-        detail_layout.setContentsMargins(50, 10, 50, 40)
-        
-        self.back_btn = QPushButton()
-        self.back_btn.setIconSize(QSize(18, 18))
-        self.back_btn.setObjectName("BackBtn")
-        self.back_btn.setCursor(Qt.PointingHandCursor)
-        self.back_btn.clicked.connect(self.go_back)
-        detail_layout.addWidget(self.back_btn)
-
-        self.card = QFrame(); self.card.setObjectName("AppCard")
-        self.card_lay = QVBoxLayout(self.card)
-        self.card_lay.setContentsMargins(40,40,40,40)
-        
-        top_row = QHBoxLayout()
-        self.icon_lab = QLabel()
-        self.icon_lab.setFixedSize(120, 120)
-        
-        v_info = QVBoxLayout()
-        
-        name_lay = QHBoxLayout()
-        self.name_lab = QLabel("")
-        self.name_lab.setFont(QFont("SF Pro Display", 32, QFont.Bold))
-        self.detail_spinner = LoadingSpinner(size=28)
-        self.detail_spinner.hide()
-        name_lay.addWidget(self.name_lab)
-        name_lay.addWidget(self.detail_spinner)
-        name_lay.addStretch()
-        
-        self.size_lab = QLabel("")
-        self.size_lab.setStyleSheet("color: #8E8E93; font-size: 14px;")
-        
-        self.stars_lab = QLabel("")
-        self.stars_lab.setStyleSheet("color: #8E8E93; font-size: 14px; font-weight: bold;")
-        
-        # NUEVO: Contenedor para los enlaces web debajo de tamaño
-        self.links_container = QWidget()
-        links_lay = QHBoxLayout(self.links_container)
-        links_lay.setContentsMargins(0, 5, 0, 0)
-        links_lay.setAlignment(Qt.AlignLeft)
-        
-        self.web_btn = QPushButton()
-        self.web_btn.setCursor(Qt.PointingHandCursor)
-        self.web_btn.setStyleSheet("background-color: transparent; color: #0071E3; font-weight: bold; font-size: 13px; text-decoration: underline; border: none; padding: 0px; text-align: left;")
-        self.web_btn.setIcon(get_ui_icon("web", False, custom_color="#0071E3"))
-        self.web_btn.setIconSize(QSize(16, 16))
-        
-        self.source_btn = QPushButton()
-        self.source_btn.setCursor(Qt.PointingHandCursor)
-        self.source_btn.setStyleSheet("background-color: transparent; color: #0071E3; font-weight: bold; font-size: 13px; text-decoration: underline; border: none; padding: 0px; text-align: left;")
-        self.source_btn.setIcon(get_ui_icon("package", False, custom_color="#0071E3"))
-        self.source_btn.setIconSize(QSize(16, 16))
-        
-        links_lay.addWidget(self.web_btn)
-        links_lay.addSpacing(15)
-        links_lay.addWidget(self.source_btn)
-        links_lay.addStretch()
-        
-        self.web_btn.hide()
-        self.source_btn.hide()
-
-        v_info.addLayout(name_lay)
-        v_info.addWidget(self.stars_lab)
-        v_info.addWidget(self.size_lab)
-        v_info.addWidget(self.links_container)
-        v_info.addStretch()
-        
-        top_row.addWidget(self.icon_lab)
-        top_row.addSpacing(30)
-        top_row.addLayout(v_info)
-        top_row.addStretch()
-
-        self.btn_row_container = QWidget()
-        btn_row = QHBoxLayout(self.btn_row_container)
-        btn_row.setContentsMargins(0,0,0,0)
-        btn_row.setSpacing(12)
-        btn_row.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        
-        self.install_btn = QPushButton()
-        self.install_btn.setProperty("class", "ActionBtn")
-        self.install_btn.setObjectName("InstallBtn")
-        self.install_btn.setFixedHeight(36)
-        self.install_btn.setCursor(Qt.PointingHandCursor)
-        self.install_btn.clicked.connect(self.install_app)
-
-        self.check_app_btn = QPushButton()
-        self.check_app_btn.setProperty("class", "ActionBtn")
-        self.check_app_btn.setStyleSheet("background-color: #F2F2F7; color: #0071E3;")
-        self.check_app_btn.setFixedHeight(36)
-        self.check_app_btn.setCursor(Qt.PointingHandCursor)
-        self.check_app_btn.clicked.connect(self.run_check_app)
-        self.check_app_btn.hide()
-
-        self.update_app_btn = QPushButton()
-        self.update_app_btn.setProperty("class", "ActionBtn")
-        self.update_app_btn.setStyleSheet("background-color: #0071E3; color: white;")
-        self.update_app_btn.setFixedHeight(36)
-        self.update_app_btn.setCursor(Qt.PointingHandCursor)
-        self.update_app_btn.clicked.connect(self.run_update_app)
-        self.update_app_btn.hide()
-
-        self.open_btn = QPushButton()
-        self.open_btn.setProperty("class", "ActionBtn")
-        self.open_btn.setStyleSheet("background-color: #0071E3; color: white;")
-        self.open_btn.setFixedHeight(36)
-        self.open_btn.setCursor(Qt.PointingHandCursor)
-        self.open_btn.clicked.connect(self.launch_app)
-        self.open_btn.hide()
-
-        self.source_selector = QComboBox()
-        self.source_selector.setItemDelegate(QStyledItemDelegate())
-        self.source_selector.setFixedHeight(36)
-        
-        btn_row.addWidget(self.install_btn)
-        btn_row.addWidget(self.check_app_btn)
-        btn_row.addWidget(self.update_app_btn)
-        btn_row.addWidget(self.open_btn)
-        btn_row.addWidget(self.source_selector)
-
-        self.progress_container = QWidget()
-        self.progress_container.hide()
-        prog_lay = QHBoxLayout(self.progress_container)
-        prog_lay.setContentsMargins(0,0,0,0)
-        prog_lay.setSpacing(15)
-        prog_lay.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        
-        self.pacman_anim = PacmanProgress()
-        self.pacman_anim.hide()
-        
-        self.install_status_lbl = QLabel()
-        self.install_status_lbl.setFont(QFont("SF Pro Text", 14, QFont.Bold))
-        
-        self.cancel_install_btn = QPushButton()
-        self.cancel_install_btn.setObjectName("CancelBtn")
-        self.cancel_install_btn.setFixedHeight(36)
-        self.cancel_install_btn.setCursor(Qt.PointingHandCursor)
-        self.cancel_install_btn.clicked.connect(self.cancel_installation)
-
-        prog_lay.addWidget(self.pacman_anim)
-        prog_lay.addWidget(self.install_status_lbl)
-        prog_lay.addWidget(self.cancel_install_btn)
-        
-        self.desc_lab = QLabel("")
-        self.desc_lab.setWordWrap(True)
-        self.desc_lab.setFont(QFont("SF Pro Text", 14))
-
-        self.reviews_label = QLabel()
-        self.reviews_label.setFont(QFont("SF Pro Display", 20, QFont.Bold))
-        self.comments_container = QVBoxLayout()
-        self.comments_container.setSpacing(10)
-
-        self.card_lay.addLayout(top_row)
-        self.card_lay.addSpacing(30)
-        self.card_lay.addWidget(self.btn_row_container)
-        self.card_lay.addWidget(self.progress_container) 
-        self.card_lay.addSpacing(30)
-        
-        self.separator_line = QFrame()
-        self.separator_line.setObjectName("SeparatorLine")
-        self.separator_line.setFixedHeight(1)
-        self.card_lay.addWidget(self.separator_line)
-        self.card_lay.addSpacing(20)
-        
-        self.card_lay.addWidget(self.desc_lab)
-        self.card_lay.addSpacing(15)
-        
-        self.gallery_scroll = QScrollArea()
-        self.gallery_scroll.setWidgetResizable(True)
-        self.gallery_scroll.setFixedHeight(300)
-        self.gallery_scroll.hide()
-        
-        self.gallery_container = QWidget()
-        self.gallery_container.setStyleSheet("background: transparent;")
-        self.gallery_container_lay = QHBoxLayout(self.gallery_container)
-        self.gallery_container_lay.setContentsMargins(0, 0, 0, 0)
-        self.gallery_container_lay.setSpacing(15)
-        self.gallery_container_lay.setAlignment(Qt.AlignLeft)
-        self.gallery_scroll.setWidget(self.gallery_container)
-        
-        self.gallery_label = QLabel()
-        self.gallery_label.setFont(QFont("SF Pro Display", 20, QFont.Bold))
-        self.gallery_label.hide()
-        
-        self.gallery_warn = QLabel()
-        self.gallery_warn.setStyleSheet("color: #888888; font-size: 11px;")
-        self.gallery_warn.hide()
-        
-        self.card_lay.addWidget(self.gallery_label)
-        self.card_lay.addWidget(self.gallery_warn)
-        self.card_lay.addSpacing(5)
-        self.card_lay.addWidget(self.gallery_scroll)
-        self.card_lay.addSpacing(30)
-        self.card_lay.addWidget(self.reviews_label)
-        self.card_lay.addSpacing(10)
-        self.card_lay.addLayout(self.comments_container)
-        self.card_lay.addStretch()
-
-        detail_layout.addWidget(self.card)
-        detail_scroll.setWidget(detail_content)
-        
-        page_detail_lay = QVBoxLayout(self.page_detail)
-        page_detail_lay.setContentsMargins(0,0,0,0)
-        page_detail_lay.addWidget(detail_scroll)
+        from pages import DetailPage
+        self.page_detail = DetailPage(self)
+        self.page_detail.back_requested.connect(self.go_back)
+        self.page_detail.install_requested.connect(self.run_install_action)
+        self.page_detail.cancel_requested.connect(self.cancel_installation)
+        self.page_detail.check_app_requested.connect(self.run_check_app)
+        self.page_detail.launch_requested.connect(self.launch_app)
         self.stacked.addWidget(self.page_detail)
 
         # --- PANTALLA 3: INSTALADAS ---
-        self.page_inst = QWidget(); self.page_inst.setObjectName("MainBg")
-        inst_page_layout = QVBoxLayout(self.page_inst)
-        inst_page_layout.setContentsMargins(50, 10, 50, 40)
-        
-        self.inst_back_btn = QPushButton()
-        self.inst_back_btn.setIconSize(QSize(18, 18))
-        self.inst_back_btn.setObjectName("BackBtn")
-        self.inst_back_btn.setCursor(Qt.PointingHandCursor)
-        self.inst_back_btn.clicked.connect(lambda: self.navigate_to(0))
-        inst_page_layout.addWidget(self.inst_back_btn)
-
-        inst_header_lay = QHBoxLayout()
-        
-        inst_title_lay = QHBoxLayout()
-        self.inst_title = QLabel()
-        self.inst_title.setFont(QFont("SF Pro Display", 32, QFont.Bold))
-        self.inst_spinner = LoadingSpinner(size=28)
-        self.inst_spinner.hide()
-        inst_title_lay.addWidget(self.inst_title)
-        inst_title_lay.addWidget(self.inst_spinner)
-        
-        self.clean_sys_btn = QPushButton()
-        self.clean_sys_btn.setStyleSheet("background-color: #F2F2F7; color: #1D1D1F; border-radius: 14px; font-weight: bold; font-size: 13px; padding: 8px 20px; border: none;")
-        self.clean_sys_btn.setCursor(Qt.PointingHandCursor)
-        self.clean_sys_btn.clicked.connect(self.run_system_clean)
-
-        self.check_sys_btn = QPushButton()
-        self.check_sys_btn.setStyleSheet("background-color: #F2F2F7; color: #0071E3; border-radius: 14px; font-weight: bold; font-size: 13px; padding: 8px 20px; border: none;")
-        self.check_sys_btn.setCursor(Qt.PointingHandCursor)
-        self.check_sys_btn.clicked.connect(self.run_check_sys)
-        
-        self.update_sys_btn = QPushButton()
-        self.update_sys_btn.setStyleSheet("background-color: #0071E3; color: white; border-radius: 14px; font-weight: bold; font-size: 13px; padding: 8px 20px; border: none;")
-        self.update_sys_btn.setCursor(Qt.PointingHandCursor)
-        self.update_sys_btn.clicked.connect(self.run_system_update)
-        self.update_sys_btn.hide()
-
-        inst_header_lay.addLayout(inst_title_lay)
-        inst_header_lay.addStretch()
-        inst_header_lay.addWidget(self.clean_sys_btn)
-        inst_header_lay.addSpacing(10)
-        inst_header_lay.addWidget(self.check_sys_btn)
-        inst_header_lay.addSpacing(10)
-        inst_header_lay.addWidget(self.update_sys_btn)
-        
-        inst_page_layout.addLayout(inst_header_lay)
-        inst_page_layout.addSpacing(10)
-        
-        self.inst_search_bar = QLineEdit()
-        self.inst_search_bar.setFixedHeight(38)
-        self.inst_search_bar.textChanged.connect(self.filter_installed)
-        inst_page_layout.addWidget(self.inst_search_bar)
-        inst_page_layout.addSpacing(10)
-        
-        self.inst_scroll = QScrollArea()
-        self.inst_scroll.setWidgetResizable(True)
-        self.inst_container = QFrame()
-        self.inst_container.setObjectName("ListContainer")
-        self.inst_layout = QVBoxLayout(self.inst_container)
-        self.inst_layout.setAlignment(Qt.AlignTop)
-        self.inst_scroll.setWidget(self.inst_container)
-        inst_page_layout.addWidget(self.inst_scroll)
+        self.page_inst = InstalledPage(self)
+        self.page_inst.back_requested.connect(lambda: self.navigate_to(0))
+        self.page_inst.app_selected.connect(self.open_app_details_from_list)
+        self.page_inst.clean_sys_requested.connect(self.run_system_clean)
+        self.page_inst.check_sys_requested.connect(self.run_check_sys)
+        self.page_inst.update_sys_requested.connect(self.run_system_update)
         self.stacked.addWidget(self.page_inst)
 
         # --- PANTALLA 4: CONFIGURACIÓN ---
@@ -850,21 +498,8 @@ class RubiAUR(QMainWindow):
         self.stacked.addWidget(self.page_settings)
 
         # --- PANTALLA 5: INSTALANDO DEPENDENCIA (YAY) ---
-        self.page_setup = QWidget(); self.page_setup.setObjectName("MainBg")
-        setup_lay = QVBoxLayout(self.page_setup)
-        setup_lay.setAlignment(Qt.AlignCenter)
-        
-        self.setup_spinner = LoadingSpinner(size=64)
-        self.setup_spinner.start()
-        
-        self.setup_lbl = QLabel()
-        self.setup_lbl.setFont(QFont("SF Pro Display", 20, QFont.Bold))
-        self.setup_lbl.setAlignment(Qt.AlignCenter)
-        
-        setup_lay.addWidget(self.setup_spinner, alignment=Qt.AlignCenter)
-        setup_lay.addSpacing(20)
-        setup_lay.addWidget(self.setup_lbl)
-        
+        from pages import SetupPage
+        self.page_setup = SetupPage(self)
         self.stacked.addWidget(self.page_setup)
         layout.addWidget(self.stacked)
 
@@ -880,22 +515,21 @@ class RubiAUR(QMainWindow):
         if hasattr(self, 'logo_btn'): self.logo_btn.setIcon(QIcon(get_resource_path("logo.svg")))
         if hasattr(self, 'installed_btn'): self.installed_btn.setIcon(get_ui_icon("installed", self.is_dark))
         if hasattr(self, 'settings_btn'): self.settings_btn.setIcon(get_ui_icon("settings", self.is_dark))
-        if hasattr(self, 'list_back_btn'): self.list_back_btn.setIcon(get_ui_icon("back", self.is_dark))
-        if hasattr(self, 'back_btn'): self.back_btn.setIcon(get_ui_icon("back", self.is_dark))
-        if hasattr(self, 'inst_back_btn'): self.inst_back_btn.setIcon(get_ui_icon("back", self.is_dark))
         
-        if hasattr(self, 'list_spinner') and self.list_spinner: self.list_spinner.update_theme(self.is_dark)
+        if hasattr(self, 'page_settings'): self.page_settings.update_theme(self.is_dark)
+        if hasattr(self, 'page_inst'): self.page_inst.update_theme(self.is_dark)
+        if hasattr(self, 'page_list'): self.page_list.update_theme(self.is_dark)
+        if hasattr(self, 'page_detail'): self.page_detail.update_theme(self.is_dark)
+        if hasattr(self, 'page_setup'): self.page_setup.update_theme(self.is_dark)
+        
         if hasattr(self, 'inst_spinner') and self.inst_spinner: self.inst_spinner.update_theme(self.is_dark)
-        if hasattr(self, 'detail_spinner') and self.detail_spinner: self.detail_spinner.update_theme(self.is_dark)
         if hasattr(self, 'pacman_anim') and self.pacman_anim: self.pacman_anim.update_theme(self.is_dark)
         if hasattr(self, 'setup_spinner') and self.setup_spinner: self.setup_spinner.update_theme(self.is_dark)
         
         if hasattr(self, 'page_settings'):
             self.page_settings.update_theme(self.is_dark)
-        if hasattr(self, 'inst_bottom_spinner') and self.inst_bottom_spinner:
-            self.inst_bottom_spinner.update_theme(self.is_dark)
-        if hasattr(self, 'cat_bottom_spinner') and self.cat_bottom_spinner:
-            self.cat_bottom_spinner.update_theme(self.is_dark)
+        if hasattr(self, 'page_inst'):
+            self.page_inst.update_theme(self.is_dark)
             
         if hasattr(self, 'cat_load_more_btn') and self.cat_load_more_btn:
             self.cat_load_more_btn.setIcon(get_ui_icon("down_arrow", self.is_dark))
@@ -1089,15 +723,15 @@ class RubiAUR(QMainWindow):
         image = QImage.fromData(img_data)
         pixmap = QPixmap.fromImage(image)
         
-        if app_name in self.home_cards_refs:
-            self.home_cards_refs[app_name].set_icon(create_rounded_pixmap(pixmap, 60, 12))
+        if hasattr(self, 'page_home') and app_name in self.page_home.home_cards_refs:
+            self.page_home.home_cards_refs[app_name].set_icon(create_rounded_pixmap(pixmap, 60, 12))
 
-        if hasattr(self, 'list_items_refs') and app_name in self.list_items_refs:
-            self.list_items_refs[app_name].set_icon(create_rounded_pixmap(pixmap, 50, 12))
+        if hasattr(self, 'page_list') and app_name in self.page_list.list_items_refs:
+            self.page_list.list_items_refs[app_name].set_icon(create_rounded_pixmap(pixmap, 50, 12))
             
-        if hasattr(self, 'current_app_data') and self.current_app_data.get('name') == app_name:
-            self.icon_lab.setStyleSheet("background-color: transparent;")
-            self.icon_lab.setPixmap(create_rounded_pixmap(pixmap, 120, 25))
+        if hasattr(self, 'page_detail') and hasattr(self, 'current_app_data') and self.current_app_data.get('name') == app_name:
+            self.page_detail.icon_lab.setStyleSheet("background-color: transparent;")
+            self.page_detail.icon_lab.setPixmap(create_rounded_pixmap(pixmap, 120, 25))
 
     def set_placeholder_icon(self, letter):
         app_name = self.current_app_data.get('name', 'a')
@@ -1124,216 +758,41 @@ class RubiAUR(QMainWindow):
     def open_installed(self):
         self.navigate_to(3)
         self.search_bar.clear()
-        self.inst_search_bar.clear()
-        self.inst_title.setText(self.tr("analyzing"))
-        self.inst_spinner.start()
+        self.page_inst.inst_search_bar.clear()
         self.search_popup.hide()
         
-        self.inst_load_more_container = None 
-        self.clear_layout(self.inst_layout)
-        
-        self.check_sys_btn.setText(self.tr("check_sys"))
-        self.check_sys_btn.setEnabled(True)
-        self.check_sys_btn.show()
-        self.update_sys_btn.hide()
-        
-        self.installed_worker.load()
-
-    def populate_installed(self, results):
-        self.inst_spinner.stop()
-        self.inst_title.setText(f"{self.tr('inst_title')} ({len(results)})")
-        self.all_installed_results = results 
-        self.filtered_installed_results = results 
-        self.current_inst_index = 0
-        self.list_items_refs = {}
-        
-        self.inst_load_more_container = None
-        self.clear_layout(self.inst_layout)
-        self.load_more_installed_apps()
-
-    def filter_installed(self, text):
-        text = text.lower().strip()
-        if not text:
-            self.filtered_installed_results = self.all_installed_results
-        else:
-            self.filtered_installed_results = [
-                app for app in self.all_installed_results 
-                if text in app['name'].lower() or text in app['desc'].lower()
-            ]
-        
-        self.current_inst_index = 0
-        
-        self.inst_load_more_container = None
-        self.clear_layout(self.inst_layout)
-        self.load_more_installed_apps()
-
-    def handle_load_more_inst_click(self):
-        self.inst_load_more_btn.hide()
-        self.inst_bottom_spinner.start()
-        QTimer.singleShot(200, self.load_more_installed_apps)
-
-    def load_more_installed_apps(self):
-        if hasattr(self, 'inst_load_more_container') and self.inst_load_more_container:
-            try:
-                self.inst_layout.removeWidget(self.inst_load_more_container)
-                self.inst_load_more_container.deleteLater()
-            except RuntimeError:
-                pass
-            self.inst_load_more_container = None
-
-        chunk = self.filtered_installed_results[self.current_inst_index : self.current_inst_index + 30]
-        self.current_inst_index += len(chunk)
-        
-        for i, app_data in enumerate(chunk):
-            item_widget = AppListItem(app_data, self.is_dark, self.tr)
-            item_widget.clicked.connect(self.open_app_details_from_list)
-            self.inst_layout.addWidget(item_widget)
-            self.list_items_refs[app_data['name']] = item_widget
-            item_widget.animate_entry(delay=i * 30)
-
-        if self.current_inst_index < len(self.filtered_installed_results):
-            self.inst_load_more_container = QWidget()
-            lay = QVBoxLayout(self.inst_load_more_container)
-            lay.setContentsMargins(0, 20, 0, 20)
-            lay.setAlignment(Qt.AlignCenter)
-            
-            self.inst_load_more_btn = QPushButton(self.tr("load_more"))
-            self.inst_load_more_btn.setObjectName("LoadMoreBtn")
-            self.inst_load_more_btn.setIcon(get_ui_icon("down_arrow", self.is_dark))
-            self.inst_load_more_btn.setIconSize(QSize(14, 14))
-            self.inst_load_more_btn.setCursor(Qt.PointingHandCursor)
-            self.inst_load_more_btn.setFixedWidth(280)
-            self.inst_load_more_btn.clicked.connect(self.handle_load_more_inst_click)
-            
-            self.inst_bottom_spinner = LoadingSpinner(size=28)
-            self.inst_bottom_spinner.update_theme(self.is_dark)
-            self.inst_bottom_spinner.hide()
-            
-            lay.addWidget(self.inst_load_more_btn, alignment=Qt.AlignCenter)
-            lay.addWidget(self.inst_bottom_spinner, alignment=Qt.AlignCenter)
-            
-            self.inst_layout.addWidget(self.inst_load_more_container)
-            
-        apps_to_load = [app['name'] for app in chunk if not get_local_icon(app['name'], 50)]
-        self.request_icons(apps_to_load)
+        self.page_inst.reload()
 
     def open_category(self, cat_name):
         self.navigate_to(1)
         self.search_bar.clear() 
         self.search_popup.hide()
-        
-        self.cat_load_more_container = None
-        self.clear_layout(self.list_layout)
-        
-        self.current_cat_name = cat_name
-        self.current_cat_apps = [app[0] for app in HOME_CATEGORIES[cat_name]]
-        self.current_cat_index = 0
-        self.list_items_refs = {}
-        
-        self.list_spinner.start()
-        self.load_more_category_apps()
-
-    def handle_cat_load_more_click(self):
-        self.cat_load_more_btn.hide()
-        self.cat_bottom_spinner.start()
-        self.load_more_category_apps()
-
-    def load_more_category_apps(self):
-        apps_to_fetch = self.current_cat_apps[self.current_cat_index : self.current_cat_index + 10]
-        if not apps_to_fetch: return
-
-        self.status_lbl.setText(f"{self.tr(f'cat_{self.current_cat_name}')}")
-        self.category_worker.load_category(apps_to_fetch, self.current_cat_name)
-
-    def populate_category(self, results, cat_name):
-        self.list_spinner.stop()
-        if hasattr(self, 'cat_load_more_container') and self.cat_load_more_container:
-            try:
-                self.list_layout.removeWidget(self.cat_load_more_container)
-                self.cat_load_more_container.deleteLater()
-            except RuntimeError:
-                pass
-            self.cat_load_more_container = None
-
-        self.current_cat_index += len(results)
-        
-        for i, app_data in enumerate(results):
-            item_widget = AppListItem(app_data, self.is_dark, self.tr)
-            item_widget.clicked.connect(self.open_app_details_from_list)
-            self.list_layout.addWidget(item_widget)
-            self.list_items_refs[app_data['name']] = item_widget
-            item_widget.animate_entry(delay=i * 30)
-
-        if self.current_cat_index < len(self.current_cat_apps):
-            self.cat_load_more_container = QWidget()
-            lay = QVBoxLayout(self.cat_load_more_container)
-            lay.setContentsMargins(0, 20, 0, 20)
-            lay.setAlignment(Qt.AlignCenter)
-            
-            self.cat_load_more_btn = QPushButton(self.tr("load_more"))
-            self.cat_load_more_btn.setObjectName("LoadMoreBtn")
-            self.cat_load_more_btn.setIcon(get_ui_icon("down_arrow", self.is_dark))
-            self.cat_load_more_btn.setIconSize(QSize(14, 14))
-            self.cat_load_more_btn.setCursor(Qt.PointingHandCursor)
-            self.cat_load_more_btn.setFixedWidth(280)
-            self.cat_load_more_btn.clicked.connect(self.handle_cat_load_more_click)
-            
-            self.cat_bottom_spinner = LoadingSpinner(size=28)
-            self.cat_bottom_spinner.update_theme(self.is_dark)
-            self.cat_bottom_spinner.hide()
-            
-            lay.addWidget(self.cat_load_more_btn, alignment=Qt.AlignCenter)
-            lay.addWidget(self.cat_bottom_spinner, alignment=Qt.AlignCenter)
-            
-            self.list_layout.addWidget(self.cat_load_more_container)
-        
-        apps_to_load = [app['name'] for app in results if not get_local_icon(app['name'], 50)]
-        self.request_icons(apps_to_load)
+        if hasattr(self, 'page_list'):
+            self.page_list.prepare_category(cat_name)
+            chunk = self.page_list.current_cat_apps[:30]
+            self.category_worker.load_category(chunk, cat_name)
 
     def start_search(self):
         query = self.search_bar.text().strip()
         if query:
             self.navigate_to(1)
-            self.status_lbl.setText(self.tr("results_for").format(query))
-            
+            if hasattr(self, 'page_list'):
+                self.page_list.prepare_search(query)
             self.search_popup.hide()
             self.search_bar.clearFocus()
-            
-            self.cat_load_more_container = None
-            self.clear_layout(self.list_layout)
-            
-            self.list_spinner.start()
             self.search_worker.search(query)
-
-    def populate_list(self, results):
-        self.list_spinner.stop()
-        if not results:
-            self.status_lbl.setText(self.tr("no_results"))
-            return
-        self.list_items_refs = {}
-        for i, app_data in enumerate(results):
-            item_widget = AppListItem(app_data, self.is_dark, self.tr)
-            item_widget.clicked.connect(self.open_app_details_from_list)
-            self.list_layout.addWidget(item_widget)
-            self.list_items_refs[app_data['name']] = item_widget
-            item_widget.animate_entry(delay=i * 30)
-        
-        apps_to_load = [app['name'] for app in results if not get_local_icon(app['name'], 50)]
-        self.request_icons(apps_to_load)
 
     def quick_search(self, query):
         self.navigate_to(2)
-        self.search_bar.clear() 
-        self.name_lab.setText(self.tr("loading"))
-        self.desc_lab.setText(self.tr("fetching_info"))
-        self.size_lab.setText("")
-        self.stars_lab.setText("")
-        self.set_placeholder_icon("?")
-        
-        self.btn_row_container.hide()
-        self.progress_container.hide()
-        
-        self.detail_spinner.start()
+        if hasattr(self, 'page_detail'):
+            self.page_detail.name_lab.setText(self.tr("loading"))
+            self.page_detail.desc_lab.setText(self.tr("fetching_info"))
+            self.page_detail.size_lab.setText("")
+            self.page_detail.stars_lab.setText("")
+            self.page_detail.set_placeholder_icon("?")
+            self.page_detail.btn_row_container.hide()
+            self.page_detail.progress_container.hide()
+            self.page_detail.detail_spinner.start()
         
         def fetch_exact():
             res_dict = {}
@@ -1359,212 +818,16 @@ class RubiAUR(QMainWindow):
 
     def open_app_details_from_list(self, data):
         self.navigate_to(2)
-        self.detail_spinner.start()
-        self.btn_row_container.hide()
-        self.progress_container.hide()
-        self._prepare_detail_view(data)
+        if hasattr(self, 'page_detail'):
+            self.page_detail.prepare_view(data)
+        self.current_app_data = data
         self.detail_worker.load_details(data)
 
-    def _prepare_detail_view(self, data):
-        self.name_lab.setText(data['name'])
-        self.desc_lab.setText(data['desc'])
-        self.size_lab.setText(self.tr("loading"))
-        self.set_placeholder_icon(data['name'][0])
-        
-        if hasattr(self, 'web_btn'): self.web_btn.hide()
-        if hasattr(self, 'source_btn'): self.source_btn.hide()
-
-        self.current_app_data = data
-        self.name_lab.setText(data['name'])
-        self.desc_lab.setText(data['desc'])
-        self.size_lab.setText(self.tr("loading"))
-        self.set_placeholder_icon(data['name'][0])
-        
-        app_name = data['name']
-        if app_name in self.search_history:
-            self.search_history.remove(app_name)
-        self.search_history.append(app_name)
-        if len(self.search_history) > 10:
-            self.search_history.pop(0)
-        self.save_history()
-        
-        votes = data.get('votes', 0)
-        if data.get('has_pacman'): 
-            self.stars_lab.setText(self.tr("qual_off"))
-        else:
-            if votes > 1000: self.stars_lab.setText(self.tr("pop_exc"))
-            elif votes > 500: self.stars_lab.setText(self.tr("pop_vhigh"))
-            elif votes > 50: self.stars_lab.setText(self.tr("pop_high"))
-            elif votes > 10: self.stars_lab.setText(self.tr("pop_mod"))
-            else: self.stars_lab.setText(self.tr("pop_new"))
-
-        self.source_selector.blockSignals(True)
-        self.source_selector.clear()
-        
-        if data.get('has_pacman'): 
-            self.source_selector.addItem(QIcon(get_resource_path("pacman.svg")), self.tr("src_pacman"), "pacman")
-        if data.get('has_aur'): 
-            self.source_selector.addItem(QIcon(get_resource_path("aur.svg")), self.tr("src_aur"), "aur")
-            
-        self.source_selector.blockSignals(False)
-        self.source_selector.setCurrentIndex(0)
-        
-        is_active_install = (self.active_install_pkg == app_name)
-        
-        if is_active_install:
-            self.btn_row_container.hide()
-            self.progress_container.show()
-            if self.active_install_action in ["install", "update_app"] and self.active_install_source == "pacman":
-                self.pacman_anim.start()
-            else:
-                self.pacman_anim.hide()
-        else:
-            self.btn_row_container.show()
-            self.progress_container.hide()
-            self.pacman_anim.stop()
-            
-            self.install_btn.setText(self.tr("loading"))
-            self.install_btn.setObjectName("InstallBtn")
-            self.install_btn.style().unpolish(self.install_btn)
-            self.install_btn.style().polish(self.install_btn)
-            self.open_btn.hide()
-            self.check_app_btn.hide()
-            self.update_app_btn.hide()
-        
-        while self.comments_container.count():
-            w = self.comments_container.takeAt(0).widget()
-            if w: w.deleteLater()
-    def update_detail_ui(self, detailed_data):
-        self.detail_spinner.stop()
-        self.current_app_data.update(detailed_data)
-        
-        # Limpiar y poblar Galería
-        for i in reversed(range(self.gallery_container_lay.count())):
-            widget = self.gallery_container_lay.itemAt(i).widget()
-            if widget: widget.deleteLater()
-            
-        screenshots = detailed_data.get("screenshots", [])
-        if screenshots:
-            self.gallery_label.show()
-            self.gallery_warn.show()
-            self.gallery_scroll.show()
-            self.gallery_worker.load(screenshots)
-        else:
-            self.gallery_label.hide()
-            self.gallery_warn.hide()
-            self.gallery_scroll.hide()
-
-        if "size" in detailed_data: self.size_lab.setText(self.tr("size_est").format(detailed_data['size']))
-        
-        # --- Mostrar y conectar los enlaces con espacio para el icono ---
-        if detailed_data.get('official_url'):
-            self.web_btn.setText(" " + self.tr("official_web"))
-            try: self.web_btn.clicked.disconnect() 
-            except Exception: pass
-            self.web_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(detailed_data['official_url'])))
-            self.web_btn.show()
-            
-        if detailed_data.get('source_url'):
-            self.source_btn.setText(" " + self.tr("pkg_source"))
-            try: self.source_btn.clicked.disconnect() 
-            except Exception: pass
-            self.source_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(detailed_data['source_url'])))
-            self.source_btn.show()
-        # --------------------------------------
-
-        is_active_install = (self.active_install_pkg == detailed_data['name'])
-        
-        if is_active_install:
-            self.btn_row_container.hide()
-            self.progress_container.show()
-        else:
-            self.btn_row_container.show() 
-            self.progress_container.hide() 
-            
-            is_installed = detailed_data.get('is_installed', False)
-            
-            self.check_app_btn.hide()
-            self.update_app_btn.hide()
-
-            if is_installed:
-                self.install_btn.setText(self.tr("uninstall_btn"))
-                self.install_btn.setObjectName("UninstallBtn")
-                self.open_btn.show()
-                self.check_app_btn.setText(self.tr("check_up_btn"))
-                self.check_app_btn.setEnabled(True)
-                self.check_app_btn.show()
-            else:
-                self.install_btn.setText(self.tr("get_btn"))
-                self.install_btn.setObjectName("InstallBtn")
-                self.open_btn.hide()
-                
-            self.install_btn.style().unpolish(self.install_btn)
-            self.install_btn.style().polish(self.install_btn)
-
-        while self.comments_container.count():
-            w = self.comments_container.takeAt(0).widget()
-            if w: w.deleteLater()
-
-        if detailed_data.get('has_pacman'):
-            self.add_comment("Arch Linux", "Este paquete oficial ha sido verificado garantizando máxima estabilidad." if self.app_settings.get("lang",1)==0 else "This official package has been verified ensuring maximum stability.")
-        elif detailed_data.get('comments'):
-            for i, comment in enumerate(detailed_data['comments']):
-                self.add_comment(f"Usuario AUR #{i+1}" if self.app_settings.get("lang",1)==0 else f"AUR User #{i+1}", comment[:300] + "..." if len(comment) > 300 else comment)
-        else:
-            self.add_comment("AUR", "No hay información adicional." if self.app_settings.get("lang",1)==0 else "No additional information available.")
-
-        if detailed_data.get('icon_url') and not get_local_icon(detailed_data['name'], 120):
-            app_name = detailed_data['name']
-            if app_name in self.icon_cache:
-                self.apply_icon(app_name, self.icon_cache[app_name])
-            else:
-                try:
-                    img_data = requests.get(detailed_data['icon_url'], timeout=3).content
-                    self.apply_icon(app_name, img_data)
-                except: pass
-
-    def add_comment(self, user, text):
-        box = QFrame()
-        box.setObjectName("ReviewBox")
-        lay = QVBoxLayout(box)
-        u_lab = QLabel(user)
-        u_lab.setFont(QFont("SF Pro Text", 13, QFont.Bold))
-        t_lab = QLabel(text)
-        t_lab.setWordWrap(True)
-        lay.addWidget(u_lab)
-        lay.addSpacing(5)
-        lay.addWidget(t_lab)
-        self.comments_container.addWidget(box)
-
-    def install_app(self):
-        idx = self.source_selector.currentIndex()
-        if idx < 0: return
-        source_type = self.source_selector.itemData(idx)
-        pkg = self.current_app_data["name"]
-        is_installed = self.current_app_data.get("is_installed", False)
-        
-        action = "uninstall" if is_installed else "install"
-        
-        self.active_install_pkg = pkg
-        self.active_install_action = action
-        self.active_install_source = source_type
-        
-        self.btn_row_container.hide()
-        self.progress_container.show()
-        
-        if action == "install" and source_type == "pacman":
-            self.install_status_lbl.setText("Preparando instalación..." if self.app_settings.get("lang",1)==0 else "Preparing installation...")
-            self.pacman_anim.start()
-        elif action == "install":
-            self.pacman_anim.hide()
-            self.install_status_lbl.setText("Instalando desde AUR..." if self.app_settings.get("lang",1)==0 else "Installing from AUR...")
-        else:
-            self.pacman_anim.hide()
-            self.install_status_lbl.setText("Desinstalando..." if self.app_settings.get("lang",1)==0 else "Uninstalling...")
-
-        aur_backend = self.aur_cb.currentText()
+    
+    def run_install_action(self, action, source_type, pkg):
+        aur_backend = self.page_settings.aur_cb.currentText() if hasattr(self, 'page_settings') else "yay"
         self.install_worker.run_command(action, source_type, pkg, aur_backend=aur_backend)
-
+        
     def cancel_installation(self):
         self.install_worker.cancel()
         self.install_status_lbl.setText("Cancelando..." if self.app_settings.get("lang",1)==0 else "Cancelling...")
@@ -1585,28 +848,29 @@ class RubiAUR(QMainWindow):
         display_text = clean_text[:40] + "..." if len(clean_text) > 40 else clean_text
         
         if action in ["install", "uninstall", "update_app"]:
-            self.install_status_lbl.setText(display_text)
+            if hasattr(self, 'page_detail'): self.page_detail.install_status_lbl.setText(display_text)
         elif action == "update_sys":
-            self.update_sys_btn.setText(display_text)
+            if hasattr(self, 'page_inst'): self.page_inst.update_sys_btn.setText(display_text)
         elif action == "clean_sys":
-            self.clean_sys_btn.setText(display_text)
+            if hasattr(self, 'page_inst'): self.page_inst.clean_sys_btn.setText(display_text)
 
     def on_install_finished(self, success, message, action):
-        self.pacman_anim.stop()
-        if self.active_install_pkg == self.current_app_data.get("name"):
-            self.progress_container.hide()
-            self.btn_row_container.show()
-        self.active_install_pkg = None
-        self.active_install_action = None
-        self.active_install_source = None
+        if hasattr(self, 'page_detail'):
+            self.page_detail.pacman_anim.stop()
+            if self.page_detail.active_install_pkg == self.current_app_data.get("name"):
+                self.page_detail.progress_container.hide()
+                self.page_detail.btn_row_container.show()
+            self.page_detail.active_install_pkg = None
+            self.page_detail.active_install_action = None
+            self.page_detail.active_install_source = None
 
         if success:
             if action in ["install", "uninstall", "update_app"]:
-                self.detail_spinner.start()
-                self.btn_row_container.hide()
+                if hasattr(self, 'page_detail'): self.page_detail.detail_spinner.start()
+                if hasattr(self, 'page_detail'): self.page_detail.btn_row_container.hide()
                 self.detail_worker.load_details(self.current_app_data)
                 if self.app_settings.get("cache", 0) == 0:
-                    self.install_worker.run_command("clean_sys", "yay", aur_backend=self.aur_cb.currentText())
+                    self.run_system_clean()
             elif action == "clean_sys":
                 if self.stacked.currentIndex() == 3:
                     self.toast = ToastNotification(self.centralWidget(), "Éxito" if self.app_settings.get("lang",1)==0 else "Success", self.tr("clean_sys") + " OK", self.is_dark)
@@ -1621,69 +885,51 @@ class RubiAUR(QMainWindow):
                 self.toast = ToastNotification(self.centralWidget(), "Error", "Error de red" if self.app_settings.get("lang",1)==0 else "Network Error", self.is_dark)
                 self.toast.show_anim()
                 if action in ["install", "uninstall", "update_app"]:
-                    self.detail_spinner.start()
-                    self.btn_row_container.hide()
+                    if hasattr(self, 'page_detail'): self.page_detail.detail_spinner.start()
+                    if hasattr(self, 'page_detail'): self.page_detail.btn_row_container.hide()
                     self.detail_worker.load_details(self.current_app_data)
 
-    def run_check_app(self):
-        self.check_app_btn.setEnabled(False)
-        self.check_app_btn.setText("Buscando..." if self.app_settings.get("lang",1)==0 else "Searching...")
-        self.check_worker.check_app(self.current_app_data['name'])
+    def run_check_app(self, pkg):
+        if hasattr(self, 'page_detail'):
+            self.page_detail.check_app_btn.setEnabled(False)
+            self.page_detail.check_app_btn.setText("Buscando..." if self.app_settings.get("lang",1)==0 else "Searching...")
+        self.check_worker.check_app(pkg)
         
     def on_app_update_checked(self, has_up, ver):
-        if has_up:
-            self.check_app_btn.hide()
-            self.update_app_btn.setText(f"{self.tr('update_btn')} (v{ver})")
-            self.update_app_btn.show()
-        else:
-            self.check_app_btn.setText(self.tr("app_updated"))
-
+        if hasattr(self, 'page_detail'):
+            self.page_detail.on_app_update_checked(has_up, ver)
+            
     def run_check_sys(self):
-        self.check_sys_btn.setEnabled(False)
-        self.check_sys_btn.setText("Buscando..." if self.app_settings.get("lang",1)==0 else "Searching...")
+        if hasattr(self, 'page_inst'):
+            self.page_inst.check_sys_btn.setEnabled(False)
+            self.page_inst.check_sys_btn.setText("Buscando..." if self.app_settings.get("lang",1)==0 else "Searching...")
         self.check_worker.check_sys()
         
     def on_sys_update_checked(self, count):
         if count > 0:
-            self.check_sys_btn.hide()
-            self.update_sys_btn.setText(f"{self.tr('inst_sys')} ({count})")
-            self.update_sys_btn.show()
+            if hasattr(self, 'page_inst'):
+                self.page_inst.check_sys_btn.hide()
+                self.page_inst.update_sys_btn.setText(f"{self.tr('inst_sys')} ({count})")
+                self.page_inst.update_sys_btn.show()
         else:
-            self.check_sys_btn.setText(self.tr("sys_updated"))
-
-    def run_update_app(self):
-        idx = self.source_selector.currentIndex()
-        if idx < 0: return
-        source_type = self.source_selector.itemData(idx)
-        pkg = self.current_app_data["name"]
-        
-        self.active_install_pkg = pkg
-        self.active_install_action = "update_app"
-        self.active_install_source = source_type
-        
-        self.btn_row_container.hide()
-        self.progress_container.show()
-        
-        if source_type == "pacman":
-            self.install_status_lbl.setText("Preparando..." if self.app_settings.get("lang",1)==0 else "Preparing...")
-            self.pacman_anim.start()
-        else:
-            self.pacman_anim.hide()
-            self.install_status_lbl.setText("Actualizando desde AUR..." if self.app_settings.get("lang",1)==0 else "Updating from AUR...")
-
-        self.install_worker.run_command("update_app", source_type, pkg, aur_backend=self.aur_cb.currentText())
+            if hasattr(self, 'page_inst'):
+                self.page_inst.check_sys_btn.setText(self.tr("sys_updated"))
+                self.page_inst.check_sys_btn.setEnabled(True)
 
     def run_system_update(self):
-        self.update_sys_btn.setEnabled(False)
-        self.update_sys_btn.setText("Iniciando..." if self.app_settings.get("lang",1)==0 else "Starting...")
-        self.install_worker.run_command("update_sys", "yay", aur_backend=self.aur_cb.currentText())
+        if hasattr(self, 'page_inst'):
+            self.page_inst.update_sys_btn.setEnabled(False)
+            self.page_inst.update_sys_btn.setText("Iniciando..." if self.app_settings.get("lang",1)==0 else "Starting...")
+        aur_backend = self.page_settings.aur_cb.currentText() if hasattr(self, 'page_settings') else "yay"
+        self.install_worker.run_command("update_sys", "aur", aur_backend=aur_backend)
 
     def run_system_clean(self):
-        reply = QMessageBox.question(self, self.tr("clean_sys"), self.tr("cache_desc"), QMessageBox.Yes | QMessageBox.No)
-        if reply == QMessageBox.Yes:
-            self.clean_sys_btn.setEnabled(False)
-            self.clean_sys_btn.setText("Limpiando..." if self.app_settings.get("lang",1)==0 else "Cleaning...")
-            self.install_worker.run_command("clean_sys", "yay", aur_backend=self.aur_cb.currentText())
+        aur_backend = self.page_settings.aur_cb.currentText() if hasattr(self, 'page_settings') else "yay"
+        if aur_backend in ["yay", "paru"]:
+            if hasattr(self, 'page_inst'):
+                self.page_inst.clean_sys_btn.setEnabled(False)
+                self.page_inst.clean_sys_btn.setText("Limpiando..." if self.app_settings.get("lang",1)==0 else "Cleaning...")
+            self.install_worker.run_command("clean_sys", "aur", aur_backend=aur_backend)
 
     def launch_app(self):
         app_name = self.current_app_data.get("name", "")
