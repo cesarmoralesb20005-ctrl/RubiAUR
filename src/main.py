@@ -15,6 +15,7 @@ from idiomas import TRANSLATIONS
 from widgets import (ToastNotification, LoadingSpinner, PacmanProgress, SearchLineEdit, FadeStackedWidget, HomeAppCard, AppListItem, FeaturedAppCard)
 from config import load_settings, save_settings, load_history, save_history
 from style import get_stylesheet
+from pages import SettingsPage
 
 # --- 4. INTERFAZ PRINCIPAL ---
 class RubiAUR(QMainWindow):
@@ -234,7 +235,8 @@ class RubiAUR(QMainWindow):
     def update_all_texts(self):
         self.search_bar.setPlaceholderText(self.tr("search_placeholder"))
         self.installed_btn.setText(f" {self.tr('installed_btn')}")
-        self.app_update_btn.setText(self.tr("btn_check_app_up"))
+        if hasattr(self, 'page_settings'):
+            self.page_settings.update_texts(self.tr)
         
         self.home_title_lbl.setText(self.tr("discover_title"))
         for cat_key, btn in self.cat_buttons.items():
@@ -268,19 +270,11 @@ class RubiAUR(QMainWindow):
         if self.check_sys_btn.text() in ["Sistema actualizado", "System up to date"]: self.check_sys_btn.setText(self.tr("sys_updated"))
         if self.update_sys_btn.text() in ["Instalar Actualizaciones", "Install Updates"]: self.update_sys_btn.setText(self.tr("inst_sys"))
         self.inst_search_bar.setPlaceholderText(self.tr("filter_inst"))
-        
-        self.set_back_btn.setText(f" {self.tr('back_btn')}")
-        self.settings_title.setText(self.tr("settings_title"))
-        self.reset_btn.setText(self.tr("reset_btn"))
-        self.about_btn.setText(self.tr("about_btn"))
-        
-        for lbl, title_key, desc_key in self.settings_labels:
-            lbl[0].setText(self.tr(title_key))
-            lbl[1].setText(self.tr(desc_key))
-            
-        self.refresh_combo_box(self.theme_cb, ["opt_auto", "opt_light", "opt_dark"])
-        self.refresh_combo_box(self.clean_cb, ["opt_clean_auto", "opt_clean_man"])
-        self.refresh_combo_box(self.up_cb, ["opt_up_start", "opt_up_no"])
+        pass            
+        if hasattr(self, 'page_settings'):
+            self.refresh_combo_box(self.page_settings.theme_cb, ["opt_auto", "opt_light", "opt_dark"])
+            self.refresh_combo_box(self.page_settings.clean_cb, ["opt_clean_auto", "opt_clean_man"])
+            self.refresh_combo_box(self.page_settings.up_cb, ["opt_up_start", "opt_up_no"])
         self.setup_lbl.setText(self.tr("installing_yay"))
 
         if hasattr(self, 'yay_card'):
@@ -352,11 +346,17 @@ class RubiAUR(QMainWindow):
     def reset_settings(self):
         reply = QMessageBox.question(self, self.tr("settings_title"), self.tr("reset_btn") + "?", QMessageBox.Yes | QMessageBox.No)
         if reply == QMessageBox.Yes:
-            self.lang_cb.blockSignals(True)
-            self.aur_cb.blockSignals(True)
-            self.clean_cb.blockSignals(True)
-            self.up_cb.blockSignals(True)
-            self.theme_cb.blockSignals(True)
+            self.app_settings = {"lang": 1, "theme": 0, "aur": 0, "cache": 0, "updates": 1}
+            self.save_settings()
+            
+            if hasattr(self, 'page_settings'):
+                for cb, idx in [(self.page_settings.lang_cb, 1), (self.page_settings.aur_cb, 0), (self.page_settings.clean_cb, 0), (self.page_settings.up_cb, 1), (self.page_settings.theme_cb, 0)]:
+                    cb.blockSignals(True)
+                    cb.setCurrentIndex(idx)
+                    cb.blockSignals(False)
+            
+            self.apply_theme()
+            self.live_update_settings_language(1)
             
             self.lang_cb.setCurrentIndex(1)
             self.aur_cb.setCurrentIndex(0)
@@ -840,100 +840,13 @@ class RubiAUR(QMainWindow):
         self.stacked.addWidget(self.page_inst)
 
         # --- PANTALLA 4: CONFIGURACIÓN ---
-        self.page_settings = QWidget(); self.page_settings.setObjectName("MainBg")
-        settings_page_layout = QVBoxLayout(self.page_settings)
-        settings_page_layout.setContentsMargins(50, 10, 50, 40)
-        
-        self.set_back_btn = QPushButton()
-        self.set_back_btn.setIconSize(QSize(18, 18))
-        self.set_back_btn.setObjectName("BackBtn")
-        self.set_back_btn.setCursor(Qt.PointingHandCursor)
-        self.set_back_btn.clicked.connect(lambda: self.navigate_to(0))
-        settings_page_layout.addWidget(self.set_back_btn)
-
-        self.settings_title = QLabel()
-        self.settings_title.setFont(QFont("SF Pro Display", 32, QFont.Bold))
-        settings_page_layout.addWidget(self.settings_title)
-        settings_page_layout.addSpacing(20)
-
-        set_scroll = QScrollArea()
-        set_scroll.setWidgetResizable(True)
-        set_container = QFrame()
-        set_container.setObjectName("ListContainer")
-        set_lay = QVBoxLayout(set_container)
-        set_lay.setContentsMargins(30, 30, 30, 30)
-        set_lay.setSpacing(20)
-        set_lay.setAlignment(Qt.AlignTop)
-
-        self.lang_cb = QComboBox()
-        self.lang_cb.setItemDelegate(QStyledItemDelegate())
-        self.lang_cb.addItems(["Español", "English", "Français", "Deutsch"])
-        self.lang_cb.setMinimumWidth(150)
-        self.lang_cb.setMaximumWidth(220)
-        self.lang_cb.setFixedHeight(36)
-        self.lang_cb.setCurrentIndex(self.app_settings.get("lang", 1))
-        self.lang_cb.currentIndexChanged.connect(self.live_update_settings_language)
-        self.create_dynamic_setting_row(set_lay, "lang_lbl", "lang_desc", self.lang_cb)
-
-        self.theme_cb = QComboBox()
-        self.theme_cb.setItemDelegate(QStyledItemDelegate())
-        self.theme_cb.setMinimumWidth(150)
-        self.theme_cb.setMaximumWidth(220)
-        self.theme_cb.setFixedHeight(36)
-        self.theme_cb.currentIndexChanged.connect(lambda i: self.update_setting("theme", i))
-        self.create_dynamic_setting_row(set_lay, "theme_lbl", "theme_desc", self.theme_cb)
-
-        self.aur_cb = QComboBox()
-        self.aur_cb.setItemDelegate(QStyledItemDelegate())
-        self.aur_cb.addItems(["yay", "paru"])
-        self.aur_cb.setMinimumWidth(150)
-        self.aur_cb.setMaximumWidth(220)
-        self.aur_cb.setFixedHeight(36)
-        self.aur_cb.setCurrentIndex(self.app_settings.get("aur", 0))
-        self.aur_cb.currentIndexChanged.connect(lambda i: self.update_setting("aur", i))
-        self.create_dynamic_setting_row(set_lay, "aur_lbl", "aur_desc", self.aur_cb)
-
-        self.clean_cb = QComboBox()
-        self.clean_cb.setItemDelegate(QStyledItemDelegate())
-        self.clean_cb.setMinimumWidth(150)
-        self.clean_cb.setMaximumWidth(220)
-        self.clean_cb.setFixedHeight(36)
-        self.clean_cb.currentIndexChanged.connect(lambda i: self.update_setting("cache", i))
-        self.create_dynamic_setting_row(set_lay, "cache_lbl", "cache_desc", self.clean_cb)
-
-        self.up_cb = QComboBox()
-        self.up_cb.setItemDelegate(QStyledItemDelegate())
-        self.up_cb.setMinimumWidth(150)
-        self.up_cb.setMaximumWidth(220)
-        self.up_cb.setFixedHeight(36)
-        self.up_cb.currentIndexChanged.connect(lambda i: self.update_setting("updates", i))
-        self.create_dynamic_setting_row(set_lay, "up_lbl", "up_desc", self.up_cb)
-
-        self.app_update_btn = QPushButton()
-        self.app_update_btn.setCursor(Qt.PointingHandCursor)
-        self.app_update_btn.setStyleSheet("background-color: #0071E3; color: white; border-radius: 12px; font-weight: bold; font-size: 13px; padding: 8px 15px; border: none;")
-        self.app_update_btn.setMinimumWidth(150)
-        self.app_update_btn.clicked.connect(self.check_self_update)
-        
-        self.create_dynamic_setting_row(set_lay, "app_up_title", "app_up_desc", self.app_update_btn)
-
-        self.reset_btn = QPushButton()
-        self.reset_btn.setCursor(Qt.PointingHandCursor)
-        self.reset_btn.setStyleSheet("background-color: transparent; color: #FF3B30; font-weight: bold; font-size: 14px; text-decoration: underline; border: none; padding: 10px;")
-        self.reset_btn.clicked.connect(self.reset_settings)
-        
-        self.about_btn = QPushButton()
-        self.about_btn.setCursor(Qt.PointingHandCursor)
-        self.about_btn.setStyleSheet("background-color: #0071E3; color: white; border-radius: 14px; font-weight: bold; font-size: 13px; padding: 8px 20px; border: none;")
-        self.about_btn.clicked.connect(self.show_about_dialog)
-
-        set_lay.addSpacing(10)
-        set_lay.addWidget(self.reset_btn, alignment=Qt.AlignCenter)
-        set_lay.addSpacing(5)
-        set_lay.addWidget(self.about_btn, alignment=Qt.AlignCenter)
-
-        set_scroll.setWidget(set_container)
-        settings_page_layout.addWidget(set_scroll)
+        # --- PANTALLA 4: AJUSTES ---
+        self.page_settings = SettingsPage(self.app_settings, self)
+        self.page_settings.back_requested.connect(lambda: self.navigate_to(0))
+        self.page_settings.setting_changed.connect(lambda k, i: self.live_update_settings_language(i) if k == "lang" else self.update_setting(k, i))
+        self.page_settings.check_update_requested.connect(self.check_self_update)
+        self.page_settings.reset_requested.connect(self.reset_settings)
+        self.page_settings.about_requested.connect(self.show_about_dialog)
         self.stacked.addWidget(self.page_settings)
 
         # --- PANTALLA 5: INSTALANDO DEPENDENCIA (YAY) ---
@@ -970,7 +883,6 @@ class RubiAUR(QMainWindow):
         if hasattr(self, 'list_back_btn'): self.list_back_btn.setIcon(get_ui_icon("back", self.is_dark))
         if hasattr(self, 'back_btn'): self.back_btn.setIcon(get_ui_icon("back", self.is_dark))
         if hasattr(self, 'inst_back_btn'): self.inst_back_btn.setIcon(get_ui_icon("back", self.is_dark))
-        if hasattr(self, 'set_back_btn'): self.set_back_btn.setIcon(get_ui_icon("back", self.is_dark))
         
         if hasattr(self, 'list_spinner') and self.list_spinner: self.list_spinner.update_theme(self.is_dark)
         if hasattr(self, 'inst_spinner') and self.inst_spinner: self.inst_spinner.update_theme(self.is_dark)
@@ -978,6 +890,8 @@ class RubiAUR(QMainWindow):
         if hasattr(self, 'pacman_anim') and self.pacman_anim: self.pacman_anim.update_theme(self.is_dark)
         if hasattr(self, 'setup_spinner') and self.setup_spinner: self.setup_spinner.update_theme(self.is_dark)
         
+        if hasattr(self, 'page_settings'):
+            self.page_settings.update_theme(self.is_dark)
         if hasattr(self, 'inst_bottom_spinner') and self.inst_bottom_spinner:
             self.inst_bottom_spinner.update_theme(self.is_dark)
         if hasattr(self, 'cat_bottom_spinner') and self.cat_bottom_spinner:
@@ -1828,26 +1742,28 @@ class RubiAUR(QMainWindow):
         msg.exec()
 
     def check_self_update(self):
-        self.app_update_btn.setText("...")
-        self.app_update_btn.setEnabled(False)
+        if hasattr(self, 'page_settings'):
+            self.page_settings.app_update_btn.setText("...")
+            self.page_settings.app_update_btn.setEnabled(False)
         self.self_updater.check(self.CURRENT_VERSION)
 
     def on_self_update_result(self, has_update, latest_ver, link):
-        self.app_update_btn.setEnabled(True)
-        self.github_update_link = link
-        
-        if has_update:
-            self.settings_badge.show()
-            self.app_update_btn.setStyleSheet("background-color: #34C759; color: white; border-radius: 12px; font-weight: bold; font-size: 13px; padding: 8px 15px; border: none;")
-            self.app_update_btn.setText(self.tr("app_up_avail").format(latest_ver))
+        if hasattr(self, 'page_settings'):
+            btn = self.page_settings.app_update_btn
+            btn.setEnabled(True)
+            self.github_update_link = link
             
-            try: self.app_update_btn.clicked.disconnect() 
-            except Exception: pass
-            self.app_update_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(self.github_update_link)))
-        else:
-            self.settings_badge.hide()
-            self.app_update_btn.setStyleSheet("background-color: #E8E8ED; color: #1D1D1F; border-radius: 12px; font-weight: bold; font-size: 13px; padding: 8px 15px; border: none;")
-            self.app_update_btn.setText(self.tr("app_up_to_date"))
+            if has_update:
+                self.settings_badge.show()
+                btn.setStyleSheet("background-color: #34C759; color: white; border-radius: 12px; font-weight: bold; font-size: 13px; padding: 8px 15px; border: none;")
+                btn.setText(self.tr("app_up_avail").format(latest_ver))
+                try: btn.clicked.disconnect() 
+                except: pass
+                btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(self.github_update_link)))
+            else:
+                self.settings_badge.hide()
+                btn.setStyleSheet("background-color: #E8E8ED; color: #1D1D1F; border-radius: 12px; font-weight: bold; font-size: 13px; padding: 8px 15px; border: none;")
+                btn.setText(self.tr("app_up_to_date"))
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

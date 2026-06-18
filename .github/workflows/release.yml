@@ -2,6 +2,9 @@ name: Build and Release RubiAUR
 
 on:
   push:
+    branches:
+      - main
+      - master
     tags:
       - 'v*' # Se ejecuta al subir un tag como v1.0
   workflow_dispatch: # Permite ejecución manual desde la pestaña Actions
